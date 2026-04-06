@@ -1,39 +1,55 @@
 import { useState } from "react";
 import { supabase, ADMIN_BOOTSTRAP_EMAIL } from "../supabase";
-import { ScanlineWrap, Cursor, Field, Btn, Input, ErrLine, OkLine, Footer } from "../ui";
+import { Page, CenteredColumn, Field, Btn, Input, ErrLine, OkLine } from "../ui";
 import { C } from "../theme";
 
 export default function Auth() {
   const [mode, setMode] = useState("login"); // 'login' | 'signup'
   return (
-    <ScanlineWrap>
-      <div style={{
-        minHeight: "calc(100vh - 60px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "40px 24px",
-      }}>
+    <Page>
+      <CenteredColumn maxWidth={480}>
         <div style={{
-          width: "100%", maxWidth: 540,
-          border: `1px solid ${C.border}`, padding: "32px 36px",
+          border: `1px solid ${C.border}`,
+          padding: "40px 44px",
           background: "rgba(255,255,255,0.02)",
+          borderRadius: 6,
         }}>
-          <h1 style={{ color: C.bright, margin: 0, fontSize: 22, letterSpacing: "2px" }}>
-            // Z5 TERMINAL
+          <h1 style={{
+            color: C.bright,
+            margin: 0,
+            fontSize: 28,
+            fontWeight: 700,
+            letterSpacing: "-0.3px",
+          }}>
+            Z5 Terminal
           </h1>
-          <div style={{ color: C.dim, marginTop: 4, marginBottom: 24, fontSize: 13 }}>
-            SNIPER OPERATIONS ENVIRONMENT v2.0 <Cursor />
+          <div style={{
+            color: C.dim,
+            marginTop: 6,
+            marginBottom: 28,
+            fontSize: 14,
+          }}>
+            Sniper Operations Environment · v2.0
           </div>
 
-          <div style={{ marginBottom: 20 }}>
-            <Btn active={mode === "login"} onClick={() => setMode("login")}>[ LOGIN ]</Btn>{" "}
-            <Btn active={mode === "signup"} onClick={() => setMode("signup")}>[ NEW OPERATOR ]</Btn>
+          <div style={{ marginBottom: 24, display: "flex", gap: 10 }}>
+            <Btn active={mode === "login"}  onClick={() => setMode("login")}>Sign in</Btn>
+            <Btn active={mode === "signup"} onClick={() => setMode("signup")}>New operator</Btn>
           </div>
 
           {mode === "login" ? <LoginForm /> : <SignupForm />}
         </div>
-      </div>
-      <Footer />
-    </ScanlineWrap>
+        <div style={{
+          textAlign: "center",
+          marginTop: 24,
+          color: C.dimmer,
+          fontSize: 12,
+          letterSpacing: "0.3px",
+        }}>
+          Internal Use Only · No Transmission Outside Operational Net
+        </div>
+      </CenteredColumn>
+    </Page>
   );
 }
 
@@ -49,22 +65,21 @@ function LoginForm() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pw });
       if (error) throw error;
-      // AuthProvider picks up the session automatically.
     } catch (e) {
-      setErr(String(e.message || e).toUpperCase());
+      setErr(String(e.message || e));
     } finally { setBusy(false); }
   }
 
   return (
     <form onSubmit={go}>
-      <Field label="EMAIL">
+      <Field label="Email">
         <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </Field>
-      <Field label="PASSWORD">
+      <Field label="Password">
         <Input type="password" value={pw} onChange={(e) => setPw(e.target.value)} required />
       </Field>
       <Btn primary type="submit" disabled={busy}>
-        {busy ? "AUTHENTICATING..." : "[ AUTHENTICATE ]"}
+        {busy ? "Authenticating…" : "Authenticate"}
       </Btn>
       <ErrLine>{err}</ErrLine>
     </form>
@@ -88,28 +103,23 @@ function SignupForm() {
     setBusy(true); setErr(""); setOk("");
     try {
       const csUp = callsign.trim().toUpperCase();
-      if (!csUp) throw new Error("CALLSIGN REQUIRED");
-      if (!isBootstrapAdmin && !code.trim()) throw new Error("INVITE CODE REQUIRED");
+      if (!csUp) throw new Error("Callsign required");
+      if (!isBootstrapAdmin && !code.trim()) throw new Error("Invite code required");
 
-      // 1. Create the auth user. Trigger creates the profiles row server-side.
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password: pw,
       });
       if (error) throw error;
 
-      // Some Supabase projects require email confirmation. If so, the user
-      // is created but the session is null until they confirm.
       const userId = data.user?.id;
-      if (!userId) throw new Error("SIGNUP FAILED");
+      if (!userId) throw new Error("Signup failed");
 
-      // 2. Set callsign + name
       const { error: e2 } = await supabase.rpc("update_my_profile", {
         p_callsign: csUp, p_full_name: name,
       });
       if (e2) throw e2;
 
-      // 3. Redeem invite (skip for bootstrap admin)
       if (!isBootstrapAdmin) {
         const { error: e3 } = await supabase.rpc("redeem_invite", {
           invite_code: code.trim().toUpperCase(),
@@ -117,40 +127,46 @@ function SignupForm() {
         if (e3) throw e3;
       }
 
-      setOk("OPERATOR REGISTERED. PROCEED TO LOGIN.");
+      setOk("Operator registered. Proceed to sign in.");
     } catch (e) {
-      setErr(String(e.message || e).toUpperCase());
+      setErr(String(e.message || e));
     } finally { setBusy(false); }
   }
 
   return (
     <form onSubmit={go}>
-      <Field label="EMAIL">
+      <Field label="Email">
         <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </Field>
-      <Field label="PASSWORD (MIN 6 CHARS)">
+      <Field label="Password (min 6 chars)">
         <Input type="password" value={pw} onChange={(e) => setPw(e.target.value)} minLength={6} required />
       </Field>
-      <Field label="CALLSIGN">
-        <Input value={callsign} onChange={(e) => setCallsign(e.target.value)}
-               placeholder="E.G. GHOST-1" required />
+      <Field label="Callsign">
+        <Input mono value={callsign} onChange={(e) => setCallsign(e.target.value)}
+               placeholder="e.g. GHOST-1" required />
       </Field>
-      <Field label="FULL NAME (OPTIONAL)">
+      <Field label="Full name (optional)">
         <Input value={name} onChange={(e) => setName(e.target.value)} />
       </Field>
       {!isBootstrapAdmin && (
-        <Field label="INVITE CODE">
-          <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
-                 placeholder="E.G. Z5-AB12-CDE3" required />
+        <Field label="Invite code">
+          <Input mono value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
+                 placeholder="e.g. Z5-AB12-CDE3" required />
         </Field>
       )}
       {isBootstrapAdmin && (
-        <div style={{ color: C.bright, fontSize: 12, marginBottom: 12 }}>
-          &gt; ADMIN BOOTSTRAP DETECTED — INVITE CODE NOT REQUIRED
+        <div style={{
+          color: C.bright, fontSize: 13, marginBottom: 16,
+          padding: "8px 12px",
+          background: "rgba(255,255,255,0.06)",
+          border: `1px solid ${C.border}`,
+          borderRadius: 2,
+        }}>
+          Admin bootstrap detected — invite code not required.
         </div>
       )}
       <Btn primary type="submit" disabled={busy}>
-        {busy ? "REGISTERING..." : "[ REGISTER ]"}
+        {busy ? "Registering…" : "Register"}
       </Btn>
       <ErrLine>{err}</ErrLine>
       <OkLine>{ok}</OkLine>

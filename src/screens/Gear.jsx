@@ -1,16 +1,16 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../auth";
 import { supabase } from "../supabase";
-import { Panel, Btn, Input, ErrLine } from "../ui";
-import { S } from "../theme";
+import { Panel, PageHeader, Btn, Input, ErrLine } from "../ui";
+import { S, C } from "../theme";
 
 const DEFAULT_SLOTS = [
-  "PRIMARY WEAPON",
-  "SCOPE / OPTIC",
-  "SUPPRESSOR",
-  "SECONDARY WEAPON",
-  "RADIO",
-  "NVG / THERMAL",
+  "Primary weapon",
+  "Scope / optic",
+  "Suppressor",
+  "Secondary weapon",
+  "Radio",
+  "NVG / thermal",
 ];
 
 export default function Gear() {
@@ -27,15 +27,14 @@ export default function Gear() {
       .from("gear").select("*")
       .eq("user_id", userId)
       .order("sort_order", { ascending: true });
-    if (error) { setErr(String(error.message).toUpperCase()); setLoading(false); return; }
+    if (error) { setErr(String(error.message)); setLoading(false); return; }
     if (!data || data.length === 0) {
-      // seed defaults
       const seed = DEFAULT_SLOTS.map((slot, i) => ({
         user_id: userId, slot, model: "", serial: "", sort_order: i,
       }));
       const { data: inserted, error: e2 } = await supabase
         .from("gear").insert(seed).select();
-      if (e2) { setErr(String(e2.message).toUpperCase()); }
+      if (e2) setErr(String(e2.message));
       setRows(inserted || []);
     } else {
       setRows(data);
@@ -53,7 +52,7 @@ export default function Gear() {
   async function addRow() {
     const sort = rows.length;
     const { data } = await supabase.from("gear")
-      .insert({ user_id: userId, slot: "CUSTOM", model: "", serial: "", sort_order: sort })
+      .insert({ user_id: userId, slot: "Custom", model: "", serial: "", sort_order: sort })
       .select().single();
     if (data) setRows((arr) => [...arr, data]);
   }
@@ -64,49 +63,55 @@ export default function Gear() {
   }
 
   return (
-    <Panel title="// PERSONAL GEAR INVENTORY"
-           action={<Btn small onClick={addRow}>[ + ADD ROW ]</Btn>}>
-      {loading && <div>LOADING...</div>}
-      <ErrLine>{err}</ErrLine>
-      <table style={S.table}>
-        <thead>
-          <tr>
-            <th style={{ ...S.th, width: "22%" }}>SLOT</th>
-            <th style={{ ...S.th, width: "32%" }}>MODEL</th>
-            <th style={{ ...S.th, width: "26%" }}>SERIAL #</th>
-            <th style={S.th}>NOTES</th>
-            <th style={S.th}> </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td style={S.td}>
-                <Input value={r.slot}
-                       onChange={(e) => update(r.id, "slot", e.target.value.toUpperCase())} />
-              </td>
-              <td style={S.td}>
-                <Input value={r.model}
-                       onChange={(e) => update(r.id, "model", e.target.value)} />
-              </td>
-              <td style={S.td}>
-                <Input value={r.serial}
-                       onChange={(e) => update(r.id, "serial", e.target.value)} />
-              </td>
-              <td style={S.td}>
-                <Input value={r.notes}
-                       onChange={(e) => update(r.id, "notes", e.target.value)} />
-              </td>
-              <td style={S.td}>
-                <Btn small onClick={() => removeRow(r.id)}>[ X ]</Btn>
-              </td>
+    <>
+      <PageHeader
+        title="Personal gear inventory"
+        subtitle="Register every piece of gear with model and serial number."
+        action={<Btn onClick={addRow}>+ Add row</Btn>}
+      />
+      <Panel>
+        {loading && <div style={{ color: C.dim }}>Loading…</div>}
+        <ErrLine>{err}</ErrLine>
+        <table style={S.table}>
+          <thead>
+            <tr>
+              <th style={{ ...S.th, width: "22%" }}>Slot</th>
+              <th style={{ ...S.th, width: "28%" }}>Model</th>
+              <th style={{ ...S.th, width: "22%" }}>Serial #</th>
+              <th style={S.th}>Notes</th>
+              <th style={{ ...S.th, width: 60 }}></th>
             </tr>
-          ))}
-          {rows.length === 0 && !loading && (
-            <tr><td style={S.td} colSpan={5}>NO GEAR REGISTERED</td></tr>
-          )}
-        </tbody>
-      </table>
-    </Panel>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td style={S.td}>
+                  <Input value={r.slot || ""}
+                         onChange={(e) => update(r.id, "slot", e.target.value)} />
+                </td>
+                <td style={S.td}>
+                  <Input value={r.model || ""}
+                         onChange={(e) => update(r.id, "model", e.target.value)} />
+                </td>
+                <td style={S.td}>
+                  <Input mono value={r.serial || ""}
+                         onChange={(e) => update(r.id, "serial", e.target.value)} />
+                </td>
+                <td style={S.td}>
+                  <Input value={r.notes || ""}
+                         onChange={(e) => update(r.id, "notes", e.target.value)} />
+                </td>
+                <td style={S.td}>
+                  <Btn small onClick={() => removeRow(r.id)}>Remove</Btn>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && !loading && (
+              <tr><td style={S.td} colSpan={5}>No gear registered.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </Panel>
+    </>
   );
 }

@@ -1,5 +1,5 @@
 import { AuthProvider, useAuth } from "./auth";
-import { ScanlineWrap } from "./ui";
+import { Page } from "./ui";
 import Auth from "./screens/Auth";
 import Shell from "./screens/Shell";
 import { C } from "./theme";
@@ -9,20 +9,19 @@ function Inner() {
 
   if (loading) {
     return (
-      <ScanlineWrap>
-        <div style={{ padding: 40, color: C.dim }}>BOOTING TERMINAL...</div>
-      </ScanlineWrap>
+      <Page>
+        <div style={{ padding: 48, color: C.dim, fontSize: 14 }}>Booting terminal…</div>
+      </Page>
     );
   }
 
   if (!session) return <Auth />;
 
-  // Edge case: session exists but profile failed to load (e.g. RLS race).
   if (!profile) {
     return (
-      <ScanlineWrap>
-        <div style={{ padding: 40, color: C.dim }}>LOADING PROFILE...</div>
-      </ScanlineWrap>
+      <Page>
+        <div style={{ padding: 48, color: C.dim, fontSize: 14 }}>Loading profile…</div>
+      </Page>
     );
   }
 
