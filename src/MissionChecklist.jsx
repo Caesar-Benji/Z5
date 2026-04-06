@@ -167,7 +167,12 @@ function BootScreen({ onJoin }) {
       const { data: m, error } = await supabase.from("missions").insert({
         code: codeUp, password_hash: hash, name: missionName,
       }).select().single();
-      if (error) throw error;
+      if (error) {
+        if (String(error.message || "").toLowerCase().includes("duplicate")) {
+          throw new Error(`MISSION CODE "${codeUp}" ALREADY EXISTS — USE [ JOIN MISSION ] INSTEAD`);
+        }
+        throw error;
+      }
 
       const csUp = callsign.trim().toUpperCase();
       if (!csUp) throw new Error("CALLSIGN REQUIRED");
@@ -182,9 +187,18 @@ function BootScreen({ onJoin }) {
 
   return (
     <ScanlineWrap>
-      <div style={{ padding: "40px 24px", maxWidth: 720, margin: "0 auto" }}>
+      <div style={{
+        minHeight: "calc(100vh - 60px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "40px 24px",
+      }}>
+        <div style={{
+          width: "100%", maxWidth: 520,
+          border: `1px solid ${DIM}`, padding: "32px 36px",
+          background: "rgba(255,255,255,0.02)",
+        }}>
         <h1 style={{ ...H1 }}>// MISSION CHECKLIST TERMINAL v1.0</h1>
-        <div style={{ color: DIM, marginBottom: 24 }}>
+        <div style={{ color: DIM, marginBottom: 24, fontSize: 13 }}>
           AUTHENTICATE TO PROCEED <Cursor />
         </div>
 
@@ -228,6 +242,7 @@ function BootScreen({ onJoin }) {
         </div>
 
         {err && <div style={{ color: "#ff5555", marginTop: 16 }}>! {err}</div>}
+        </div>
       </div>
       <Footer />
     </ScanlineWrap>
@@ -454,8 +469,8 @@ function ChecklistScreen({ session }) {
           }} />
         </div>
         <div style={{
-          marginTop: 12, color: ready ? "#7fff7f" : DIM,
-          textShadow: ready ? "0 0 6px #7fff7f" : "none",
+          marginTop: 12, color: ready ? BRIGHT : DIM,
+          textShadow: ready ? "0 0 8px #ffffff" : "none",
           fontWeight: "bold",
         }}>
           {ready ? "STATUS: MISSION READY" : "STATUS: PREP IN PROGRESS"}
@@ -544,7 +559,7 @@ function RollupScreen({ session }) {
               const offline = ageSec > 60;
               const ready = done === total;
               const status = offline ? "OFFLINE" : ready ? "READY" : "PREP";
-              const color = offline ? "#ff5555" : ready ? "#7fff7f" : DIM;
+              const color = offline ? "#ff5555" : ready ? BRIGHT : DIM;
               return (
                 <tr key={op.id}>
                   <td style={TD}>{op.callsign}</td>
@@ -600,8 +615,11 @@ async function flushQueue() {
 // CHROME / SHARED UI
 // =====================================================================
 
-const GREEN = "#33ff33";
-const DIM   = "#1a8c1a";
+// Color palette: white-on-black terminal (was green-on-black).
+// Kept the GREEN/DIM identifiers to avoid touching every reference.
+const GREEN = "#f5f5f5";   // primary text
+const DIM   = "#888888";   // secondary text / borders
+const BRIGHT = "#ffffff";  // emphasis (status, glow)
 const BG    = "#000";
 
 const FONT = `"Courier New", "Consolas", "Monaco", "Lucida Console", monospace`;
@@ -668,8 +686,14 @@ function Footer() {
 
 function Section({ title, children }) {
   return (
-    <div style={{ marginBottom: 24, border: `1px solid ${DIM}`, padding: 16 }}>
-      <div style={{ color: GREEN, marginBottom: 12 }}>{title}</div>
+    <div style={{
+      marginBottom: 28, border: `1px solid ${DIM}`, padding: "20px 24px",
+      background: "rgba(255,255,255,0.015)",
+    }}>
+      <div style={{
+        color: BRIGHT, marginBottom: 16, fontSize: 13,
+        letterSpacing: "1px", borderBottom: `1px dashed ${DIM}`, paddingBottom: 8,
+      }}>{title}</div>
       {children}
     </div>
   );
@@ -702,23 +726,25 @@ function Cursor() {
 const H1 = { color: GREEN, marginBottom: 4, fontWeight: "bold", fontSize: 18 };
 
 const INPUT = {
-  background: "#000", color: GREEN, border: `1px solid ${DIM}`,
-  padding: "6px 8px", fontFamily: FONT, fontSize: 14, width: 260, outline: "none",
+  background: "#0a0a0a", color: GREEN, border: `1px solid ${DIM}`,
+  padding: "8px 10px", fontFamily: FONT, fontSize: 14,
+  width: "100%", maxWidth: 320, outline: "none", boxSizing: "border-box",
 };
 
 const BTN = {
   background: "#000", color: GREEN, border: `1px solid ${DIM}`,
-  padding: "6px 10px", fontFamily: FONT, cursor: "pointer", fontSize: 13,
+  padding: "8px 14px", fontFamily: FONT, cursor: "pointer", fontSize: 13,
+  letterSpacing: "0.5px", transition: "all 120ms",
 };
-const BTN_ACTIVE = { ...BTN, borderColor: GREEN, color: GREEN };
-const BTN_PRIMARY = { ...BTN, borderColor: GREEN, padding: "8px 14px" };
-const BTN_SMALL = { ...BTN, padding: "2px 6px", fontSize: 12 };
+const BTN_ACTIVE = { ...BTN, borderColor: BRIGHT, color: BRIGHT, background: "#1a1a1a" };
+const BTN_PRIMARY = { ...BTN, borderColor: BRIGHT, color: BRIGHT, padding: "10px 18px", fontSize: 14 };
+const BTN_SMALL = { ...BTN, padding: "3px 8px", fontSize: 12 };
 
 const TABLE = {
   width: "100%", borderCollapse: "collapse", marginBottom: 12,
 };
 const TH = {
   textAlign: "left", color: DIM, borderBottom: `1px solid ${DIM}`,
-  padding: "6px 4px", fontWeight: "normal",
+  padding: "8px 6px", fontWeight: "normal", fontSize: 12, letterSpacing: "0.5px",
 };
-const TD = { padding: "4px", borderBottom: `1px dashed ${DIM}` };
+const TD = { padding: "6px", borderBottom: `1px dashed ${DIM}` };
