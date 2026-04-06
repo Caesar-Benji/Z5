@@ -1,10 +1,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Base path matches the GitHub repo name so assets resolve correctly
-// when served from https://<user>.github.io/Mission-Check-List/
+// Base path matches the GitHub repo name. New repo is "Z5".
 export default defineConfig({
   plugins: [react()],
-  base: "/Mission-Check-List/",
+  base: "/Z5/",
   server: { port: 5173 },
 });
