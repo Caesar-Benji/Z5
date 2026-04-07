@@ -35,7 +35,13 @@ export default function Shell() {
         <img
           src={`${import.meta.env.BASE_URL}z5-logo.png`}
           alt="Z5"
-          style={{ width: 110, height: "auto", display: "block" }}
+          style={{
+            width: "100%",
+            maxWidth: 150,
+            maxHeight: 90,
+            objectFit: "contain",
+            display: "block",
+          }}
         />
         <div style={{
           color: C.bright,

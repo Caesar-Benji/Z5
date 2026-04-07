@@ -23,7 +23,13 @@ export default function Auth() {
             <img
               src={`${import.meta.env.BASE_URL}z5-logo.png`}
               alt="Z5"
-              style={{ width: 180, height: "auto", marginBottom: 16 }}
+              style={{
+                width: "100%",
+                maxWidth: 240,
+                maxHeight: 140,
+                objectFit: "contain",
+                marginBottom: 16,
+              }}
             />
             <h1 style={{
               color: C.bright,
