@@ -24,15 +24,27 @@ export default function Shell() {
   const sidebar = (
     <>
       <div style={{
-        color: C.bright,
-        fontSize: 18,
-        fontWeight: 700,
-        letterSpacing: "1.5px",
         padding: "0 14px 24px",
         borderBottom: `1px solid ${C.border}`,
         marginBottom: 12,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 10,
       }}>
-        Z5 TERMINAL
+        <img
+          src={`${import.meta.env.BASE_URL}z5-logo.png`}
+          alt="Z5"
+          style={{ width: 110, height: "auto", display: "block" }}
+        />
+        <div style={{
+          color: C.bright,
+          fontSize: 16,
+          fontWeight: 700,
+          letterSpacing: "2px",
+        }}>
+          Z5 TERMINAL
+        </div>
       </div>
 
       <NavLabel>Navigation</NavLabel>

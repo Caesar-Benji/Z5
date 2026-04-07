@@ -14,22 +14,35 @@ export default function Auth() {
           background: "rgba(255,255,255,0.02)",
           borderRadius: 6,
         }}>
-          <h1 style={{
-            color: C.bright,
-            margin: 0,
-            fontSize: 28,
-            fontWeight: 700,
-            letterSpacing: "-0.3px",
-          }}>
-            Z5 Terminal
-          </h1>
           <div style={{
-            color: C.dim,
-            marginTop: 6,
-            marginBottom: 28,
-            fontSize: 14,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginBottom: 24,
           }}>
-            Sniper Operations Environment · v2.0
+            <img
+              src={`${import.meta.env.BASE_URL}z5-logo.png`}
+              alt="Z5"
+              style={{ width: 180, height: "auto", marginBottom: 16 }}
+            />
+            <h1 style={{
+              color: C.bright,
+              margin: 0,
+              fontSize: 28,
+              fontWeight: 700,
+              letterSpacing: "-0.3px",
+              textAlign: "center",
+            }}>
+              Z5 Terminal
+            </h1>
+            <div style={{
+              color: C.dim,
+              marginTop: 6,
+              fontSize: 14,
+              textAlign: "center",
+            }}>
+              Sniper Operations Environment · v2.0
+            </div>
           </div>
 
           <div style={{ marginBottom: 24, display: "flex", gap: 10 }}>
