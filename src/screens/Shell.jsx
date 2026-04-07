@@ -107,16 +107,16 @@ export default function Shell() {
     <div style={{
       display: "flex",
       alignItems: "center",
-      gap: 12,
-      minHeight: 44,
+      gap: 14,
+      minHeight: 52,
     }}>
       <img
         src={`${import.meta.env.BASE_URL}z5-logo.png`}
         alt="Z5"
         style={{
-          height: 34,
+          height: 52,
           width: "auto",
-          maxWidth: 60,
+          maxWidth: 92,
           objectFit: "contain",
           flexShrink: 0,
         }}
@@ -129,9 +129,9 @@ export default function Shell() {
       }}>
         <div style={{
           color: C.bright,
-          fontSize: 13,
-          fontWeight: 700,
-          letterSpacing: "1.6px",
+          fontSize: 18,
+          fontWeight: 800,
+          letterSpacing: "2px",
           lineHeight: 1.1,
         }}>
           Z5 TERMINAL
@@ -140,8 +140,8 @@ export default function Shell() {
           display: "flex",
           alignItems: "center",
           gap: 6,
-          marginTop: 2,
-          fontSize: 11,
+          marginTop: 3,
+          fontSize: 12,
           color: C.dim,
           overflow: "hidden",
           whiteSpace: "nowrap",

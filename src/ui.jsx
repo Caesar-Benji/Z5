@@ -237,25 +237,26 @@ export function PageHeader({ title, subtitle, action }) {
       flexDirection: isMobile ? "column" : "row",
       justifyContent: "space-between",
       alignItems: isMobile ? "stretch" : "flex-start",
-      gap: isMobile ? 14 : 0,
-      marginBottom: isMobile ? 20 : 28,
-      paddingBottom: isMobile ? 14 : 20,
+      gap: isMobile ? 12 : 0,
+      marginBottom: isMobile ? 14 : 28,
+      paddingBottom: isMobile ? 10 : 20,
       borderBottom: `1px solid ${C.border}`,
     }}>
       <div>
         <h1 style={{
           margin: 0,
-          fontSize: isMobile ? 22 : 26,
+          fontSize: isMobile ? 16 : 26,
           fontWeight: 700,
           color: C.bright,
-          letterSpacing: "-0.3px",
+          letterSpacing: isMobile ? "0.3px" : "-0.3px",
+          textTransform: isMobile ? "uppercase" : "none",
           lineHeight: 1.2,
         }}>{title}</h1>
         {subtitle && (
           <div style={{
             color: C.dim,
-            fontSize: isMobile ? 13 : 14,
-            marginTop: 6,
+            fontSize: isMobile ? 12 : 14,
+            marginTop: isMobile ? 3 : 6,
           }}>
             {subtitle}
           </div>
