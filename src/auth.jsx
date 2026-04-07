@@ -7,13 +7,40 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState(null);
 
   const loadProfile = useCallback(async (userId) => {
-    if (!userId) { setProfile(null); return; }
-    const { data, error } = await supabase
-      .from("profiles").select("*").eq("id", userId).single();
-    if (error) { setProfile(null); return; }
-    setProfile(data);
+    if (!userId) { setProfile(null); setProfileError(null); return; }
+    setProfileError(null);
+    try {
+      // Race the query against a timeout so the supabase client can never
+      // leave us hanging forever (observed in the wild with stale tokens).
+      const queryPromise = supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("profile query timeout")), 6000)
+      );
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+      if (error) {
+        console.error("loadProfile error", error);
+        setProfile(null);
+        setProfileError(error.message || "Failed to load profile");
+        return;
+      }
+      if (!data) {
+        setProfile(null);
+        setProfileError("No profile row found for this account");
+        return;
+      }
+      setProfile(data);
+    } catch (e) {
+      console.error("loadProfile threw", e);
+      setProfile(null);
+      setProfileError(e?.message || String(e));
+    }
   }, []);
 
   useEffect(() => {
@@ -79,7 +106,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthCtx.Provider value={{ session, profile, loading, refreshProfile, signOut }}>
+    <AuthCtx.Provider value={{ session, profile, profileError, loading, refreshProfile, signOut }}>
       {children}
     </AuthCtx.Provider>
   );
