@@ -17,17 +17,55 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session);
-      if (data.session?.user) await loadProfile(data.session.user.id);
-      setLoading(false);
-    });
+    let cancelled = false;
+
+    // Hard safety: if anything below stalls (stale refresh token, network
+    // hiccup, etc.), never leave the user looking at "Booting terminal…"
+    // forever. Force the loading state off after 4s no matter what.
+    const safety = setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 4000);
+
+    (async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (cancelled) return;
+        if (error) throw error;
+        setSession(data.session);
+        if (data.session?.user) {
+          try { await loadProfile(data.session.user.id); }
+          catch (e) { console.warn("loadProfile failed", e); }
+        }
+      } catch (e) {
+        console.warn("getSession failed", e);
+        // Wipe any corrupt local session so next reload starts clean.
+        try { await supabase.auth.signOut(); } catch {}
+        setSession(null);
+        setProfile(null);
+      } finally {
+        if (!cancelled) {
+          clearTimeout(safety);
+          setLoading(false);
+        }
+      }
+    })();
+
     const { data: sub } = supabase.auth.onAuthStateChange(async (_evt, sess) => {
+      if (cancelled) return;
       setSession(sess);
-      if (sess?.user) await loadProfile(sess.user.id);
-      else setProfile(null);
+      if (sess?.user) {
+        try { await loadProfile(sess.user.id); }
+        catch (e) { console.warn("loadProfile (auth change) failed", e); }
+      } else {
+        setProfile(null);
+      }
     });
-    return () => sub.subscription.unsubscribe();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(safety);
+      sub.subscription.unsubscribe();
+    };
   }, [loadProfile]);
 
   const refreshProfile = useCallback(async () => {
