@@ -1,10 +1,12 @@
 import { useAuth, roleLabel } from "../auth";
 import { Panel, PageHeader, Badge } from "../ui";
+import { useIsMobile } from "../useIsMobile";
 import { C } from "../theme";
 
 export default function Home() {
   const { profile } = useAuth();
   const greeting = greet();
+  const isMobile = useIsMobile();
 
   return (
     <>
@@ -15,8 +17,10 @@ export default function Home() {
 
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-        gap: 20,
+        gridTemplateColumns: isMobile
+          ? "1fr"
+          : "repeat(auto-fit, minmax(320px, 1fr))",
+        gap: isMobile ? 14 : 20,
       }}>
         <Panel title="Upcoming missions">
           <EmptyState>

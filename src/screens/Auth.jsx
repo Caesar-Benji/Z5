@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { supabase, ADMIN_BOOTSTRAP_EMAIL } from "../supabase";
 import { Page, CenteredColumn, Field, Btn, Input, ErrLine, OkLine } from "../ui";
+import { useIsMobile } from "../useIsMobile";
 import { C } from "../theme";
 
 export default function Auth() {
   const [mode, setMode] = useState("login"); // 'login' | 'signup'
+  const isMobile = useIsMobile();
   return (
     <Page>
       <CenteredColumn maxWidth={480}>
         <div style={{
           border: `1px solid ${C.border}`,
-          padding: "40px 44px",
+          padding: isMobile ? "28px 20px" : "40px 44px",
           background: "rgba(255,255,255,0.02)",
           borderRadius: 6,
         }}>
@@ -25,16 +27,16 @@ export default function Auth() {
               alt="Z5"
               style={{
                 width: "100%",
-                maxWidth: 240,
-                maxHeight: 140,
+                maxWidth: isMobile ? 180 : 240,
+                maxHeight: isMobile ? 100 : 140,
                 objectFit: "contain",
-                marginBottom: 16,
+                marginBottom: isMobile ? 12 : 16,
               }}
             />
             <h1 style={{
               color: C.bright,
               margin: 0,
-              fontSize: 28,
+              fontSize: isMobile ? 24 : 28,
               fontWeight: 700,
               letterSpacing: "-0.3px",
               textAlign: "center",
@@ -73,6 +75,7 @@ export default function Auth() {
 }
 
 function LoginForm() {
+  const isMobile = useIsMobile();
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
@@ -97,7 +100,7 @@ function LoginForm() {
       <Field label="Password">
         <Input type="password" value={pw} onChange={(e) => setPw(e.target.value)} required />
       </Field>
-      <Btn primary type="submit" disabled={busy}>
+      <Btn primary type="submit" disabled={busy} fullWidth={isMobile}>
         {busy ? "Authenticating…" : "Authenticate"}
       </Btn>
       <ErrLine>{err}</ErrLine>
@@ -106,6 +109,7 @@ function LoginForm() {
 }
 
 function SignupForm() {
+  const isMobile = useIsMobile();
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [code, setCode] = useState("");
@@ -184,7 +188,7 @@ function SignupForm() {
           Admin bootstrap detected — invite code not required.
         </div>
       )}
-      <Btn primary type="submit" disabled={busy}>
+      <Btn primary type="submit" disabled={busy} fullWidth={isMobile}>
         {busy ? "Registering…" : "Register"}
       </Btn>
       <ErrLine>{err}</ErrLine>

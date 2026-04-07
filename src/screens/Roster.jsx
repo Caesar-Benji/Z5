@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth, roleLabel, canManageSquads, canCreateInvites } from "../auth";
 import { supabase } from "../supabase";
 import { Panel, PageHeader, Btn, Input, Field, ErrLine, OkLine, Badge, Mono } from "../ui";
+import { useIsMobile } from "../useIsMobile";
 import { C, S } from "../theme";
 
 function shortCode() {
@@ -86,6 +87,7 @@ export default function Roster() {
 }
 
 function SquadBlock({ squad, members }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{ marginBottom: 28 }}>
       <div style={{
@@ -96,33 +98,76 @@ function SquadBlock({ squad, members }) {
         display: "flex",
         alignItems: "center",
         gap: 10,
+        flexWrap: "wrap",
       }}>
         {squad.name}
         <Badge>{members.length} {members.length === 1 ? "member" : "members"}</Badge>
       </div>
-      <table style={S.table}>
-        <thead>
-          <tr>
-            <th style={{ ...S.th, width: "20%" }}>Callsign</th>
-            <th style={{ ...S.th, width: "25%" }}>Name</th>
-            <th style={{ ...S.th, width: "18%" }}>Role</th>
-            <th style={S.th}>Email</th>
-          </tr>
-        </thead>
-        <tbody>
+      {isMobile ? (
+        <div>
           {members.map((m) => (
-            <tr key={m.id}>
-              <td style={S.td}><Mono>{m.callsign || "—"}</Mono></td>
-              <td style={S.td}>{m.full_name || <span style={{ color: C.dim }}>—</span>}</td>
-              <td style={S.td}><Badge tone="bright">{roleLabel(m.role)}</Badge></td>
-              <td style={{ ...S.td, color: C.dim }}>{m.email}</td>
-            </tr>
+            <div key={m.id} style={{
+              border: `1px solid ${C.border}`,
+              borderRadius: 6,
+              padding: "12px 14px",
+              marginBottom: 10,
+              background: "rgba(255,255,255,0.02)",
+            }}>
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 6,
+                gap: 10,
+              }}>
+                <Mono style={{ color: C.bright, fontWeight: 600, fontSize: 15 }}>
+                  {m.callsign || "—"}
+                </Mono>
+                <Badge tone="bright">{roleLabel(m.role)}</Badge>
+              </div>
+              <div style={{ fontSize: 14, color: C.text, marginBottom: 2 }}>
+                {m.full_name || <span style={{ color: C.dim }}>—</span>}
+              </div>
+              <div style={{
+                fontSize: 12,
+                color: C.dim,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}>
+                {m.email}
+              </div>
+            </div>
           ))}
           {members.length === 0 && (
-            <tr><td style={{ ...S.td, color: C.dim }} colSpan={4}>No members.</td></tr>
+            <div style={{ color: C.dim, fontSize: 14, padding: "6px 0" }}>No members.</div>
           )}
-        </tbody>
-      </table>
+        </div>
+      ) : (
+        <table style={S.table}>
+          <thead>
+            <tr>
+              <th style={{ ...S.th, width: "20%" }}>Callsign</th>
+              <th style={{ ...S.th, width: "25%" }}>Name</th>
+              <th style={{ ...S.th, width: "18%" }}>Role</th>
+              <th style={S.th}>Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.map((m) => (
+              <tr key={m.id}>
+                <td style={S.td}><Mono>{m.callsign || "—"}</Mono></td>
+                <td style={S.td}>{m.full_name || <span style={{ color: C.dim }}>—</span>}</td>
+                <td style={S.td}><Badge tone="bright">{roleLabel(m.role)}</Badge></td>
+                <td style={{ ...S.td, color: C.dim }}>{m.email}</td>
+              </tr>
+            ))}
+            {members.length === 0 && (
+              <tr><td style={{ ...S.td, color: C.dim }} colSpan={4}>No members.</td></tr>
+            )}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
@@ -130,6 +175,7 @@ function SquadBlock({ squad, members }) {
 function CreateSquadPanel({ onCreated, setErr }) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const isMobile = useIsMobile();
 
   async function create(e) {
     e.preventDefault();
@@ -148,12 +194,19 @@ function CreateSquadPanel({ onCreated, setErr }) {
 
   return (
     <Panel title="Register new squad">
-      <form onSubmit={create} style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+      <form onSubmit={create} style={{
+        display: "flex",
+        gap: 12,
+        alignItems: isMobile ? "stretch" : "flex-end",
+        flexWrap: "wrap",
+        flexDirection: isMobile ? "column" : "row",
+      }}>
         <Field label="Squad name">
           <Input value={name} onChange={(e) => setName(e.target.value)}
-                 placeholder="e.g. WRAITH" style={{ width: 280 }} />
+                 placeholder="e.g. WRAITH"
+                 style={{ width: isMobile ? "100%" : 280 }} />
         </Field>
-        <Btn primary type="submit" disabled={busy}>
+        <Btn primary type="submit" disabled={busy} fullWidth={isMobile}>
           {busy ? "Registering…" : "Register squad"}
         </Btn>
       </form>
@@ -163,6 +216,7 @@ function CreateSquadPanel({ onCreated, setErr }) {
 
 function InvitesPanel({ squads, invites, profile, onChanged, setErr }) {
   const isAdmin = profile?.role === "admin" || profile?.role === "officer";
+  const isMobile = useIsMobile();
 
   const allowedSquads = isAdmin ? squads : squads.filter((s) => s.id === profile?.squad_id);
   const allowedRoles  = isAdmin ? ["sniper", "squad_leader"] : ["sniper"];
@@ -197,12 +251,22 @@ function InvitesPanel({ squads, invites, profile, onChanged, setErr }) {
     <Panel title="Invite codes"
            action={<span style={{ color: C.dim, fontSize: 12 }}>Share the code with the new operator</span>}>
       <form onSubmit={create} style={{
-        marginBottom: 24, display: "flex", gap: 14, alignItems: "flex-end", flexWrap: "wrap",
+        marginBottom: 24,
+        display: "flex",
+        gap: 14,
+        alignItems: isMobile ? "stretch" : "flex-end",
+        flexWrap: "wrap",
+        flexDirection: isMobile ? "column" : "row",
       }}>
         <Field inline label="Squad">
           <select value={squadId}
                   onChange={(e) => setSquadId(e.target.value)}
-                  style={{ ...S.input, width: 260 }}>
+                  style={{
+                    ...S.input,
+                    width: isMobile ? "100%" : 260,
+                    fontSize: isMobile ? 16 : S.input.fontSize,
+                    minHeight: isMobile ? 46 : undefined,
+                  }}>
             {allowedSquads.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
@@ -212,17 +276,70 @@ function InvitesPanel({ squads, invites, profile, onChanged, setErr }) {
         <Field inline label="Role">
           <select value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  style={{ ...S.input, width: 220 }}>
+                  style={{
+                    ...S.input,
+                    width: isMobile ? "100%" : 220,
+                    fontSize: isMobile ? 16 : S.input.fontSize,
+                    minHeight: isMobile ? 46 : undefined,
+                  }}>
             {allowedRoles.map((r) => (
               <option key={r} value={r}>{roleLabel(r)}</option>
             ))}
           </select>
         </Field>
-        <Btn primary type="submit" disabled={busy || !squadId}>
+        <Btn primary type="submit" disabled={busy || !squadId} fullWidth={isMobile}>
           {busy ? "Generating…" : "Generate code"}
         </Btn>
       </form>
 
+      {isMobile ? (
+        <div>
+          {invites.map((inv) => {
+            const sq = squads.find((s) => s.id === inv.squad_id);
+            const used = !!inv.used_by;
+            return (
+              <div key={inv.id} style={{
+                border: `1px solid ${C.border}`,
+                borderRadius: 6,
+                padding: "12px 14px",
+                marginBottom: 10,
+                background: "rgba(255,255,255,0.02)",
+              }}>
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: 8,
+                }}>
+                  <Mono style={{
+                    color: used ? C.dim : C.bright,
+                    fontWeight: 700,
+                    fontSize: 15,
+                  }}>
+                    {inv.code}
+                  </Mono>
+                  {used ? <Badge>Used</Badge> : <Badge tone="ok">Available</Badge>}
+                </div>
+                <div style={{ fontSize: 13, color: C.text, marginBottom: 2 }}>
+                  {sq?.name || "—"} · {roleLabel(inv.role)}
+                </div>
+                <div style={{ fontSize: 11, color: C.dim }}>
+                  {new Date(inv.created_at).toLocaleString([], {
+                    month: "short", day: "2-digit",
+                    hour: "2-digit", minute: "2-digit",
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {invites.length === 0 && (
+            <div style={{ color: C.dim, fontSize: 14, padding: "6px 0" }}>
+              No invites generated.
+            </div>
+          )}
+        </div>
+      ) : (
       <table style={S.table}>
         <thead>
           <tr>
@@ -265,6 +382,7 @@ function InvitesPanel({ squads, invites, profile, onChanged, setErr }) {
           )}
         </tbody>
       </table>
+      )}
     </Panel>
   );
 }

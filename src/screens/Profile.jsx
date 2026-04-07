@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useAuth, roleLabel } from "../auth";
 import { supabase } from "../supabase";
 import { Panel, PageHeader, Field, Btn, Input, ErrLine, OkLine } from "../ui";
+import { useIsMobile } from "../useIsMobile";
 import { C } from "../theme";
 
 export default function Profile() {
   const { profile, refreshProfile } = useAuth();
+  const isMobile = useIsMobile();
   const [callsign, setCallsign] = useState(profile?.callsign || "");
   const [name, setName] = useState(profile?.full_name || "");
   const [pw, setPw] = useState("");
@@ -54,8 +56,8 @@ export default function Profile() {
 
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-        gap: 20,
+        gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(360px, 1fr))",
+        gap: isMobile ? 14 : 20,
       }}>
         <Panel title="Identity">
           <form onSubmit={saveProfile}>
@@ -71,7 +73,7 @@ export default function Profile() {
             <Field label="Full name">
               <Input value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-            <Btn primary type="submit" disabled={busy}>
+            <Btn primary type="submit" disabled={busy} fullWidth={isMobile}>
               {busy ? "Saving…" : "Save profile"}
             </Btn>
             <ErrLine>{err}</ErrLine>
@@ -87,7 +89,7 @@ export default function Profile() {
             <Field label="Confirm new password">
               <Input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} />
             </Field>
-            <Btn primary type="submit" disabled={busy}>Change password</Btn>
+            <Btn primary type="submit" disabled={busy} fullWidth={isMobile}>Change password</Btn>
           </form>
           <div style={{ color: C.dim, fontSize: 12, marginTop: 14 }}>
             Password changes take effect immediately on the next request.

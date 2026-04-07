@@ -1,5 +1,6 @@
 // Z5 :: shared UI primitives
 import { C, S, FONT } from "./theme";
+import { useIsMobile } from "./useIsMobile";
 
 // Full-viewport page wrapper (replaces the old ScanlineWrap).
 export function Page({ children }) {
@@ -21,21 +22,94 @@ export function Page({ children }) {
 
 // Centered narrow column (used for the auth screen).
 export function CenteredColumn({ children, maxWidth = 460 }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{
       minHeight: "100vh",
       display: "flex",
-      alignItems: "center",
+      alignItems: isMobile ? "flex-start" : "center",
       justifyContent: "center",
-      padding: "40px 24px",
+      padding: isMobile
+        ? "calc(24px + var(--safe-top)) 16px calc(24px + var(--safe-bottom))"
+        : "40px 24px",
     }}>
       <div style={{ width: "100%", maxWidth }}>{children}</div>
     </div>
   );
 }
 
-// App shell with a left sidebar nav and a main content area that fills the rest.
-export function AppShell({ sidebar, topBar, children }) {
+// Height of the mobile bottom tab bar; used to pad main content so the
+// last panel doesn't disappear behind the tab bar + safe-area.
+const BOTTOM_TAB_HEIGHT = 62;
+
+/**
+ * App shell with:
+ *  - Desktop: left sidebar 220px + scrollable main
+ *  - Mobile:  compact top bar + main + fixed bottom tab bar
+ *
+ * Props:
+ *   sidebar        — full sidebar node (desktop only, or opened drawer)
+ *   mobileTopBar   — small node shown in the mobile top bar (logo + user chip)
+ *   mobileTabBar   — tab bar node rendered at the bottom on mobile
+ *   children       — main content
+ */
+export function AppShell({ sidebar, mobileTopBar, mobileTabBar, children }) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh",
+        background: C.bg,
+      }}>
+        {mobileTopBar && (
+          <header style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 20,
+            background: "rgba(0,0,0,0.92)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            borderBottom: `1px solid ${C.border}`,
+            padding: "calc(10px + var(--safe-top)) 16px 10px",
+          }}>
+            {mobileTopBar}
+          </header>
+        )}
+        <main style={{
+          flex: 1,
+          padding: `18px 16px calc(${BOTTOM_TAB_HEIGHT + 24}px + var(--safe-bottom))`,
+          width: "100%",
+          boxSizing: "border-box",
+          minWidth: 0,
+        }}>
+          {children}
+        </main>
+        {mobileTabBar && (
+          <nav style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: `calc(${BOTTOM_TAB_HEIGHT}px + var(--safe-bottom))`,
+            paddingBottom: "var(--safe-bottom)",
+            background: "rgba(0,0,0,0.96)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            borderTop: `1px solid ${C.border}`,
+            display: "flex",
+            zIndex: 30,
+          }}>
+            {mobileTabBar}
+          </nav>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop
   return (
     <div style={{
       display: "flex",
@@ -64,7 +138,6 @@ export function AppShell({ sidebar, topBar, children }) {
         flexDirection: "column",
         minWidth: 0,
       }}>
-        {topBar}
         <div style={{
           flex: 1,
           padding: "32px 40px",
@@ -79,7 +152,7 @@ export function AppShell({ sidebar, topBar, children }) {
   );
 }
 
-// Sidebar nav link.
+// Sidebar nav link (desktop).
 export function NavItem({ active, onClick, children }) {
   return (
     <button
@@ -105,6 +178,40 @@ export function NavItem({ active, onClick, children }) {
   );
 }
 
+// Bottom tab bar item (mobile). Equally-spaced, stacked icon + label.
+export function TabItem({ active, onClick, icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: 1,
+        background: "transparent",
+        border: "none",
+        borderTop: `2px solid ${active ? C.bright : "transparent"}`,
+        color: active ? C.bright : C.dim,
+        fontFamily: FONT,
+        fontSize: 11,
+        fontWeight: active ? 700 : 500,
+        letterSpacing: "0.4px",
+        textTransform: "uppercase",
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 3,
+        padding: "8px 4px",
+        minWidth: 0,
+      }}
+    >
+      <span aria-hidden style={{ fontSize: 20, lineHeight: 1 }}>{icon}</span>
+      <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
+        {label}
+      </span>
+    </button>
+  );
+}
+
 // Sidebar section label (e.g. "NAVIGATION", "ACCOUNT").
 export function NavLabel({ children }) {
   return (
@@ -123,25 +230,33 @@ export function NavLabel({ children }) {
 
 // Section heading used at the top of each screen.
 export function PageHeader({ title, subtitle, action }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{
       display: "flex",
+      flexDirection: isMobile ? "column" : "row",
       justifyContent: "space-between",
-      alignItems: "flex-start",
-      marginBottom: 28,
-      paddingBottom: 20,
+      alignItems: isMobile ? "stretch" : "flex-start",
+      gap: isMobile ? 14 : 0,
+      marginBottom: isMobile ? 20 : 28,
+      paddingBottom: isMobile ? 14 : 20,
       borderBottom: `1px solid ${C.border}`,
     }}>
       <div>
         <h1 style={{
           margin: 0,
-          fontSize: 26,
+          fontSize: isMobile ? 22 : 26,
           fontWeight: 700,
           color: C.bright,
           letterSpacing: "-0.3px",
+          lineHeight: 1.2,
         }}>{title}</h1>
         {subtitle && (
-          <div style={{ color: C.dim, fontSize: 14, marginTop: 6 }}>
+          <div style={{
+            color: C.dim,
+            fontSize: isMobile ? 13 : 14,
+            marginTop: 6,
+          }}>
             {subtitle}
           </div>
         )}
@@ -152,14 +267,21 @@ export function PageHeader({ title, subtitle, action }) {
 }
 
 export function Panel({ title, children, action }) {
+  const isMobile = useIsMobile();
+  const panelStyle = isMobile
+    ? { ...S.panel, padding: "18px 16px", marginBottom: 16, borderRadius: 6 }
+    : S.panel;
   return (
-    <div style={S.panel}>
+    <div style={panelStyle}>
       {title && (
         <div style={{
           ...S.panelTitle,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          marginBottom: isMobile ? 14 : 20,
+          paddingBottom: isMobile ? 10 : 12,
+          fontSize: isMobile ? 12 : 13,
         }}>
           <span>{title}</span>
           {action}
@@ -171,12 +293,14 @@ export function Panel({ title, children, action }) {
 }
 
 export function Field({ label, children, inline }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{
-      display: inline ? "inline-block" : "block",
-      marginRight: inline ? 16 : 0,
+      display: inline && !isMobile ? "inline-block" : "block",
+      marginRight: inline && !isMobile ? 16 : 0,
       marginBottom: 16,
-      minWidth: inline ? 240 : "auto",
+      minWidth: inline && !isMobile ? 240 : "auto",
+      width: isMobile ? "100%" : "auto",
       verticalAlign: "top",
     }}>
       <div style={S.label}>{label}</div>
@@ -185,21 +309,44 @@ export function Field({ label, children, inline }) {
   );
 }
 
-export function Btn({ active, primary, small, style, ...rest }) {
+export function Btn({ active, primary, small, fullWidth, style, ...rest }) {
+  const isMobile = useIsMobile();
   let s = { ...S.btn };
   if (active) s = { ...s, ...S.btnActive };
   if (primary) s = { ...s, ...S.btnPrimary };
   if (small) s = { ...s, ...S.btnSmall };
+  if (isMobile) {
+    s = {
+      ...s,
+      minHeight: 44,
+      padding: primary ? "12px 20px" : "11px 16px",
+      fontSize: 15,
+    };
+  }
+  if (fullWidth) s = { ...s, width: "100%" };
   if (style) s = { ...s, ...style };
   return <button {...rest} style={s} />;
 }
 
 export function Input({ mono, ...props }) {
-  return <input {...props} style={{ ...S.input, ...(mono ? S.inputMono : {}), ...(props.style || {}) }} />;
+  const isMobile = useIsMobile();
+  const base = { ...S.input, ...(mono ? S.inputMono : {}) };
+  if (isMobile) {
+    base.fontSize = 16; // prevent iOS zoom on focus
+    base.padding = "12px 14px";
+    base.minHeight = 46;
+  }
+  return <input {...props} style={{ ...base, ...(props.style || {}) }} />;
 }
 
 export function Textarea(props) {
-  return <textarea {...props} style={{ ...S.input, height: 120, resize: "vertical", ...(props.style || {}) }} />;
+  const isMobile = useIsMobile();
+  const base = { ...S.input, height: 120, resize: "vertical" };
+  if (isMobile) {
+    base.fontSize = 16;
+    base.padding = "12px 14px";
+  }
+  return <textarea {...props} style={{ ...base, ...(props.style || {}) }} />;
 }
 
 export function Mono({ children, style }) {
@@ -272,6 +419,61 @@ export function Footer({ text }) {
       letterSpacing: "0.3px",
     }}>
       {text || "Z5 · Internal Use Only · No Transmission Outside Operational Net"}
+    </div>
+  );
+}
+
+/**
+ * Stacked-card alternative to a table row, used on mobile to avoid
+ * horizontal scroll. `rows` is an array of { label, value } pairs.
+ */
+export function DataCard({ title, rows, action }) {
+  return (
+    <div style={{
+      border: `1px solid ${C.border}`,
+      borderRadius: 4,
+      padding: "14px 14px 10px",
+      marginBottom: 12,
+      background: "rgba(255,255,255,0.02)",
+    }}>
+      {(title || action) && (
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 10,
+          paddingBottom: 8,
+          borderBottom: `1px solid ${C.border}`,
+        }}>
+          <div style={{ color: C.bright, fontWeight: 600, fontSize: 14 }}>{title}</div>
+          {action}
+        </div>
+      )}
+      {rows.map((r, i) => (
+        <div key={i} style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          padding: "6px 0",
+          fontSize: 14,
+        }}>
+          <div style={{
+            color: C.dim,
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: "0.8px",
+            textTransform: "uppercase",
+            flexShrink: 0,
+          }}>{r.label}</div>
+          <div style={{
+            color: C.text,
+            textAlign: "right",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            minWidth: 0,
+          }}>{r.value}</div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../auth";
 import { supabase } from "../supabase";
-import { Panel, PageHeader, Btn, Input, ErrLine } from "../ui";
+import { Panel, PageHeader, Btn, Input, ErrLine, Field } from "../ui";
+import { useIsMobile } from "../useIsMobile";
 import { S, C } from "../theme";
 
 const DEFAULT_SLOTS = [
@@ -19,6 +20,7 @@ export default function Gear() {
   const [rows, setRows] = useState([]);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -67,50 +69,90 @@ export default function Gear() {
       <PageHeader
         title="Personal gear inventory"
         subtitle="Register every piece of gear with model and serial number."
-        action={<Btn onClick={addRow}>+ Add row</Btn>}
+        action={<Btn onClick={addRow} fullWidth={isMobile}>+ Add row</Btn>}
       />
       <Panel>
         {loading && <div style={{ color: C.dim }}>Loading…</div>}
         <ErrLine>{err}</ErrLine>
-        <table style={S.table}>
-          <thead>
-            <tr>
-              <th style={{ ...S.th, width: "22%" }}>Slot</th>
-              <th style={{ ...S.th, width: "28%" }}>Model</th>
-              <th style={{ ...S.th, width: "22%" }}>Serial #</th>
-              <th style={S.th}>Notes</th>
-              <th style={{ ...S.th, width: 60 }}></th>
-            </tr>
-          </thead>
-          <tbody>
+
+        {isMobile ? (
+          <div>
             {rows.map((r) => (
-              <tr key={r.id}>
-                <td style={S.td}>
+              <div key={r.id} style={{
+                border: `1px solid ${C.border}`,
+                borderRadius: 6,
+                padding: 14,
+                marginBottom: 14,
+                background: "rgba(255,255,255,0.02)",
+              }}>
+                <Field label="Slot">
                   <Input value={r.slot || ""}
                          onChange={(e) => update(r.id, "slot", e.target.value)} />
-                </td>
-                <td style={S.td}>
+                </Field>
+                <Field label="Model">
                   <Input value={r.model || ""}
                          onChange={(e) => update(r.id, "model", e.target.value)} />
-                </td>
-                <td style={S.td}>
+                </Field>
+                <Field label="Serial #">
                   <Input mono value={r.serial || ""}
                          onChange={(e) => update(r.id, "serial", e.target.value)} />
-                </td>
-                <td style={S.td}>
+                </Field>
+                <Field label="Notes">
                   <Input value={r.notes || ""}
                          onChange={(e) => update(r.id, "notes", e.target.value)} />
-                </td>
-                <td style={S.td}>
+                </Field>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
                   <Btn small onClick={() => removeRow(r.id)}>Remove</Btn>
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
             {rows.length === 0 && !loading && (
-              <tr><td style={S.td} colSpan={5}>No gear registered.</td></tr>
+              <div style={{ color: C.dim, fontSize: 14, padding: "8px 0" }}>
+                No gear registered.
+              </div>
             )}
-          </tbody>
-        </table>
+          </div>
+        ) : (
+          <table style={S.table}>
+            <thead>
+              <tr>
+                <th style={{ ...S.th, width: "22%" }}>Slot</th>
+                <th style={{ ...S.th, width: "28%" }}>Model</th>
+                <th style={{ ...S.th, width: "22%" }}>Serial #</th>
+                <th style={S.th}>Notes</th>
+                <th style={{ ...S.th, width: 60 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id}>
+                  <td style={S.td}>
+                    <Input value={r.slot || ""}
+                           onChange={(e) => update(r.id, "slot", e.target.value)} />
+                  </td>
+                  <td style={S.td}>
+                    <Input value={r.model || ""}
+                           onChange={(e) => update(r.id, "model", e.target.value)} />
+                  </td>
+                  <td style={S.td}>
+                    <Input mono value={r.serial || ""}
+                           onChange={(e) => update(r.id, "serial", e.target.value)} />
+                  </td>
+                  <td style={S.td}>
+                    <Input value={r.notes || ""}
+                           onChange={(e) => update(r.id, "notes", e.target.value)} />
+                  </td>
+                  <td style={S.td}>
+                    <Btn small onClick={() => removeRow(r.id)}>Remove</Btn>
+                  </td>
+                </tr>
+              ))}
+              {rows.length === 0 && !loading && (
+                <tr><td style={S.td} colSpan={5}>No gear registered.</td></tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </Panel>
     </>
   );
