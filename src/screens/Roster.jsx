@@ -1,10 +1,23 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth, roleLabel, canManageSquads, canCreateInvites } from "../auth";
 import { supabase } from "../supabase";
 import { Panel, PageHeader, Btn, Input, Field, ErrLine, OkLine, Badge, Mono } from "../ui";
 import { useIsMobile } from "../useIsMobile";
 import { C, S } from "../theme";
 import AnnouncementComposer from "./AnnouncementComposer";
+
+// Squad lifecycle status
+const SQUAD_STATUS_LABELS = {
+  active:   "ACTIVE",
+  training: "IN TRAINING",
+  archived: "ARCHIVED",
+};
+const SQUAD_STATUS_TONES = {
+  active:   "ok",
+  training: "warn",
+  archived: "default",
+};
+const SQUAD_STATUS_ORDER = { active: 0, training: 1, archived: 2 };
 
 function shortCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -49,6 +62,26 @@ export default function Roster() {
   const showCreateSquad  = canManageSquads(profile?.role);
   const showCreateInvite = canCreateInvites(profile?.role);
 
+  const sortedSquads = useMemo(() => {
+    return [...squads].sort((a, b) => {
+      const sa = SQUAD_STATUS_ORDER[a.status ?? "active"] ?? 0;
+      const sb = SQUAD_STATUS_ORDER[b.status ?? "active"] ?? 0;
+      if (sa !== sb) return sa - sb;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+  }, [squads]);
+
+  async function changeSquadStatus(squad, nextStatus) {
+    setErr(""); setOk("");
+    const { error } = await supabase
+      .from("squads")
+      .update({ status: nextStatus })
+      .eq("id", squad.id);
+    if (error) { setErr(error.message); return; }
+    setOk(`Squad "${squad.name}" → ${SQUAD_STATUS_LABELS[nextStatus]}.`);
+    load();
+  }
+
   return (
     <>
       <PageHeader
@@ -64,8 +97,14 @@ export default function Roster() {
 
       <Panel title="Squads">
         {squads.length === 0 && <div style={{ color: C.dim }}>No squads registered.</div>}
-        {squads.map((sq) => (
-          <SquadBlock key={sq.id} squad={sq} members={members.filter((m) => m.squad_id === sq.id)} />
+        {sortedSquads.map((sq) => (
+          <SquadBlock
+            key={sq.id}
+            squad={sq}
+            members={members.filter((m) => m.squad_id === sq.id)}
+            canManage={showCreateSquad}
+            onChangeStatus={changeSquadStatus}
+          />
         ))}
         {showCreateSquad && (
           <SquadBlock squad={{ id: null, name: "Unassigned" }}
@@ -89,10 +128,41 @@ export default function Roster() {
   );
 }
 
-function SquadBlock({ squad, members }) {
+function SquadBlock({ squad, members, canManage, onChangeStatus }) {
   const isMobile = useIsMobile();
+  const status = squad.status ?? null; // null for the synthetic "Unassigned" block
+  const statusLabel = status ? SQUAD_STATUS_LABELS[status] : null;
+  const statusTone  = status ? SQUAD_STATUS_TONES[status]  : "default";
+
+  // Available transitions, simple state machine
+  function nextActions() {
+    if (!status || !canManage || !onChangeStatus) return [];
+    if (status === "training") {
+      return [
+        { label: "Graduate → Active", to: "active", primary: true },
+        { label: "Archive",           to: "archived" },
+      ];
+    }
+    if (status === "active") {
+      return [
+        { label: "Mark training", to: "training" },
+        { label: "Archive",       to: "archived" },
+      ];
+    }
+    if (status === "archived") {
+      return [
+        { label: "Reactivate", to: "active", primary: true },
+      ];
+    }
+    return [];
+  }
+  const actions = nextActions();
+
   return (
-    <div style={{ marginBottom: 28 }}>
+    <div style={{
+      marginBottom: 28,
+      opacity: status === "archived" ? 0.55 : 1,
+    }}>
       <div style={{
         color: C.bright,
         fontSize: 15,
@@ -104,7 +174,27 @@ function SquadBlock({ squad, members }) {
         flexWrap: "wrap",
       }}>
         {squad.name}
+        {statusLabel && <Badge tone={statusTone}>{statusLabel}</Badge>}
         <Badge>{members.length} {members.length === 1 ? "member" : "members"}</Badge>
+        {actions.length > 0 && (
+          <div style={{
+            marginLeft: "auto",
+            display: "flex",
+            gap: 6,
+            flexWrap: "wrap",
+          }}>
+            {actions.map((a) => (
+              <Btn
+                key={a.to}
+                small
+                primary={a.primary}
+                onClick={() => onChangeStatus(squad, a.to)}
+              >
+                {a.label}
+              </Btn>
+            ))}
+          </div>
+        )}
       </div>
       {isMobile ? (
         <div>
@@ -177,6 +267,7 @@ function SquadBlock({ squad, members }) {
 
 function CreateSquadPanel({ onCreated, setErr }) {
   const [name, setName] = useState("");
+  const [status, setStatus] = useState("active");
   const [busy, setBusy] = useState(false);
   const isMobile = useIsMobile();
 
@@ -186,10 +277,11 @@ function CreateSquadPanel({ onCreated, setErr }) {
     try {
       const nm = name.trim().toUpperCase();
       if (!nm) throw new Error("Squad name required");
-      const { error } = await supabase.from("squads").insert({ name: nm });
+      const { error } = await supabase.from("squads").insert({ name: nm, status });
       if (error) throw error;
       setName("");
-      onCreated(`Squad "${nm}" registered.`);
+      setStatus("active");
+      onCreated(`Squad "${nm}" registered (${SQUAD_STATUS_LABELS[status]}).`);
     } catch (e) {
       setErr(String(e.message || e));
     } finally { setBusy(false); }
@@ -207,7 +299,21 @@ function CreateSquadPanel({ onCreated, setErr }) {
         <Field label="Squad name">
           <Input value={name} onChange={(e) => setName(e.target.value)}
                  placeholder="e.g. WRAITH"
-                 style={{ width: isMobile ? "100%" : 280 }} />
+                 style={{ width: isMobile ? "100%" : 240 }} />
+        </Field>
+        <Field label="Initial status">
+          <select value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  style={{
+                    ...S.input,
+                    width: isMobile ? "100%" : 200,
+                    fontSize: isMobile ? 16 : S.input.fontSize,
+                    minHeight: isMobile ? 46 : undefined,
+                  }}>
+            <option value="active">Active</option>
+            <option value="training">In training</option>
+            <option value="archived">Archived</option>
+          </select>
         </Field>
         <Btn primary type="submit" disabled={busy} fullWidth={isMobile}>
           {busy ? "Registering…" : "Register squad"}
@@ -222,7 +328,9 @@ function InvitesPanel({ squads, invites, profile, onChanged, setErr }) {
   const isMobile = useIsMobile();
 
   const allowedSquads = isAdmin ? squads : squads.filter((s) => s.id === profile?.squad_id);
-  const allowedRoles  = isAdmin ? ["sniper", "squad_leader"] : ["sniper"];
+  const allowedRoles  = isAdmin
+    ? ["sniper", "squad_leader", "instructor"]
+    : ["sniper"];
 
   const [squadId, setSquadId] = useState(allowedSquads[0]?.id || "");
   const [role, setRole] = useState("sniper");
