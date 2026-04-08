@@ -123,9 +123,14 @@ export function roleLabel(role) {
     case "admin":        return "ADMIN";
     case "officer":      return "TEAM OFFICER";
     case "squad_leader": return "SQUAD LEADER";
+    case "instructor":   return "INSTRUCTOR";
     case "sniper":       return "SNIPER";
     default:             return (role || "").toUpperCase();
   }
+}
+
+export function isInstructor(role) {
+  return role === "instructor";
 }
 
 export function canManageSquads(role) {
@@ -134,4 +139,9 @@ export function canManageSquads(role) {
 
 export function canCreateInvites(role) {
   return role === "admin" || role === "officer" || role === "squad_leader";
+}
+
+// Who can author an admin task with no specific squad ("whole team").
+export function canCreateWholeTeamTask(role) {
+  return role === "admin" || role === "officer";
 }

@@ -4,6 +4,7 @@ import { Page, AppShell, NavItem, NavLabel, TabItem, Badge } from "../ui";
 import { useIsMobile } from "../useIsMobile";
 import { C, FONT_MONO } from "../theme";
 import Home from "./Home";
+import Calendar from "./Calendar";
 import Profile from "./Profile";
 import Gear from "./Gear";
 import Roster from "./Roster";
@@ -13,6 +14,7 @@ import Checklist from "./Checklist";
 
 const NAV_MAIN = [
   { key: "home",     label: "Home",     icon: "◉" },
+  { key: "calendar", label: "Calendar", icon: "▤" },
   { key: "missions", label: "Missions", icon: "✦" },
   { key: "gear",     label: "Gear",     icon: "▣" },
   { key: "roster",   label: "Roster",   icon: "▦" },
@@ -260,6 +262,15 @@ export default function Shell() {
               setView("missions");
             }}
             onGoMissions={() => { setMissionView("list"); setView("missions"); }}
+          />
+        )}
+        {view === "calendar" && (
+          <Calendar
+            onOpenMission={(id) => {
+              setActiveMissionId(id);
+              setMissionView("detail");
+              setView("missions");
+            }}
           />
         )}
         {view === "missions" && renderMissions()}

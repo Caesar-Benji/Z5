@@ -3,6 +3,7 @@ import { useAuth, roleLabel, canCreateInvites } from "../auth";
 import {
   getMission, getMyChecklistState, toggleChecklistItem,
   getMissionReadiness, subscribeMissionRealtime, updateMissionStatus,
+  setAdminTaskDone,
 } from "../data/missions";
 import {
   Panel, PageHeader, Btn, Badge, Mono, ErrLine, OkLine,
@@ -132,6 +133,21 @@ export default function Checklist({ missionId, onBack }) {
           <ErrLine>{err || "Mission not found."}</ErrLine>
         </Panel>
       </>
+    );
+  }
+
+  // Admin tasks use a totally separate lightweight view.
+  if (mission.kind === "admin") {
+    return (
+      <AdminTaskView
+        mission={mission}
+        operators={operators}
+        profile={profile}
+        isMobile={isMobile}
+        canSeeRollup={canSeeRollup}
+        onBack={onBack}
+        reload={load}
+      />
     );
   }
 
@@ -395,4 +411,125 @@ function formatWhen(ts) {
     month: "short", day: "2-digit",
     hour: "2-digit", minute: "2-digit",
   }).toUpperCase();
+}
+
+// ---------- Admin task view -------------------------------------------
+
+function AdminTaskView({ mission, operators, profile, isMobile, canSeeRollup, onBack, reload }) {
+  const myOp = operators.find((o) => o.user_id === profile?.id) || null;
+  const isAssignee = !!myOp;
+  const iAmDone = !!myOp?.done;
+
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const doneCount  = operators.filter((o) => o.done).length;
+  const totalCount = operators.length;
+
+  async function toggleMine() {
+    setBusy(true);
+    setErr("");
+    const { error } = await setAdminTaskDone({ missionId: mission.id, done: !iAmDone });
+    setBusy(false);
+    if (error) { setErr(String(error.message || error)); return; }
+    reload && reload();
+  }
+
+  const statusLabel = MISSION_STATUS_LABELS[mission.status] || mission.status;
+  const statusTone  = MISSION_STATUS_TONES[mission.status] || "default";
+
+  return (
+    <>
+      <PageHeader
+        title={mission.name}
+        subtitle={`Admin task · due ${formatWhen(mission.due_at)}${mission.location ? ` · ${mission.location}` : ""}`}
+        action={<Btn onClick={onBack} fullWidth={isMobile}>Back</Btn>}
+      />
+
+      <Panel>
+        <div style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 10,
+          alignItems: "center",
+          marginBottom: 14,
+        }}>
+          <Badge tone={statusTone}>{statusLabel}</Badge>
+          <Badge tone="bright">ADMIN TASK</Badge>
+          <Badge tone={doneCount === totalCount ? "ok" : "default"}>
+            {doneCount}/{totalCount} DONE
+          </Badge>
+        </div>
+
+        {mission.notes && (
+          <div style={{
+            color: C.text,
+            fontSize: 14,
+            lineHeight: 1.5,
+            whiteSpace: "pre-wrap",
+            padding: "10px 12px",
+            background: "rgba(255,255,255,0.03)",
+            border: `1px solid ${C.border}`,
+            borderRadius: 3,
+            marginBottom: 14,
+          }}>
+            {mission.notes}
+          </div>
+        )}
+
+        {isAssignee ? (
+          <Btn
+            primary={!iAmDone}
+            disabled={busy}
+            fullWidth={isMobile}
+            onClick={toggleMine}
+          >
+            {iAmDone ? "Mark not done" : "Mark done"}
+          </Btn>
+        ) : (
+          <div style={{ color: C.dim, fontSize: 13 }}>
+            You are not assigned to this task.
+          </div>
+        )}
+
+        <ErrLine>{err}</ErrLine>
+      </Panel>
+
+      {canSeeRollup && (
+        <Panel title="Assignees">
+          {operators.length === 0 && (
+            <div style={{ color: C.dim, fontSize: 13 }}>No assignees.</div>
+          )}
+          {operators.map((o) => (
+            <div key={o.user_id} style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 0",
+              borderBottom: `1px solid ${C.border}`,
+              flexWrap: "wrap",
+            }}>
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <div style={{
+                  fontFamily: FONT_MONO,
+                  color: C.bright,
+                  fontWeight: 600,
+                  fontSize: 14,
+                }}>
+                  {o.callsign || "—"}
+                </div>
+                <div style={{ color: C.dim, fontSize: 12 }}>
+                  {o.full_name || "—"}
+                  {o.profile_role && <> · {roleLabel(o.profile_role)}</>}
+                </div>
+              </div>
+              <Badge tone={o.done ? "ok" : "default"}>
+                {o.done ? "DONE" : "PENDING"}
+              </Badge>
+            </div>
+          ))}
+        </Panel>
+      )}
+    </>
+  );
 }

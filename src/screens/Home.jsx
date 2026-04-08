@@ -8,7 +8,11 @@ import {
   listMyUpcomingMissions, getMyChecklistState, getMission,
 } from "../data/missions";
 import { listRecentAnnouncements, subscribeAnnouncements } from "../data/announcements";
-import { MISSION_STATUS_LABELS, MISSION_STATUS_TONES, OPERATOR_ROLE_LABELS, sectionsForRole } from "../missionTemplate";
+import {
+  MISSION_STATUS_LABELS, MISSION_STATUS_TONES,
+  OPERATOR_ROLE_LABELS, sectionsForRole,
+  MISSION_KIND_ICONS,
+} from "../missionTemplate";
 
 export default function Home({ onOpenMission, onGoMissions }) {
   const { profile } = useAuth();
@@ -33,6 +37,14 @@ export default function Home({ onOpenMission, onGoMissions }) {
     // Per-mission progress for each
     const progress = {};
     for (const m of upcoming || []) {
+      if ((m.kind || "operational") === "admin") {
+        // Admin tasks: progress is just my done flag (1/1 or 0/1).
+        progress[m.id] = {
+          checked: m.my_done ? 1 : 0,
+          total:   1,
+        };
+        continue;
+      }
       const [{ items }, { data: st }] = await Promise.all([
         getMission(m.id).then((r) => ({ items: r.items || [] })),
         getMyChecklistState(m.id, profile.id),
@@ -212,6 +224,10 @@ export default function Home({ onOpenMission, onGoMissions }) {
 function MissionCardRow({ mission, pct, checked, total, onClick }) {
   const statusTone = MISSION_STATUS_TONES[mission.status] || "default";
   const statusLabel = MISSION_STATUS_LABELS[mission.status] || mission.status;
+  const kind = mission.kind || "operational";
+  const icon = MISSION_KIND_ICONS[kind] || "✦";
+  const whenTs = kind === "admin" ? mission.due_at : mission.scheduled_at;
+  const whenPrefix = kind === "admin" ? "DUE " : "";
   return (
     <button
       type="button"
@@ -233,17 +249,22 @@ function MissionCardRow({ mission, pct, checked, total, onClick }) {
         gap: 10,
         marginBottom: 6,
       }}>
-        <div style={{
-          color: C.bright,
-          fontSize: 14,
-          fontWeight: 600,
-          flex: 1,
-          minWidth: 0,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}>
-          {mission.name}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+          <span aria-hidden style={{
+            color: kind === "admin" ? C.warn : C.bright,
+            fontSize: 16,
+          }}>{icon}</span>
+          <div style={{
+            color: C.bright,
+            fontSize: 14,
+            fontWeight: 600,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}>
+            {mission.name}
+          </div>
         </div>
         <Badge tone={statusTone}>{statusLabel}</Badge>
       </div>
@@ -255,7 +276,7 @@ function MissionCardRow({ mission, pct, checked, total, onClick }) {
         flexWrap: "wrap",
         marginBottom: 8,
       }}>
-        <span style={{ fontFamily: FONT_MONO }}>{formatWhen(mission.scheduled_at)}</span>
+        <span style={{ fontFamily: FONT_MONO }}>{whenPrefix}{formatWhen(whenTs)}</span>
         {mission.location && (
           <>
             <span style={{ color: C.dimmer }}>·</span>

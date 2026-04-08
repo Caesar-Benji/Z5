@@ -119,3 +119,27 @@ export const MISSION_STATUS_LABELS = Object.fromEntries(
 export const MISSION_STATUS_TONES = Object.fromEntries(
   MISSION_STATUSES.map((s) => [s.key, s.tone])
 );
+
+// ---------- Mission kinds ---------------------------------------------
+// Kept in sync with missions.kind check constraint in schema_v4.sql.
+
+export const MISSION_KINDS = [
+  { key: "operational", label: "Operational", icon: "✦" },
+  { key: "admin",       label: "Admin task",  icon: "◎" },
+];
+
+export const MISSION_KIND_LABELS = Object.fromEntries(
+  MISSION_KINDS.map((k) => [k.key, k.label])
+);
+
+export const MISSION_KIND_ICONS = Object.fromEntries(
+  MISSION_KINDS.map((k) => [k.key, k.icon])
+);
+
+// Admin task assignee scopes (UI-only; the DB stores the resulting
+// `squad_id` + `mission_operators` rows).
+export const ASSIGNEE_SCOPES = [
+  { key: "team",   label: "Whole team" },
+  { key: "squad",  label: "Pick squad" },
+  { key: "people", label: "Pick individuals" },
+];

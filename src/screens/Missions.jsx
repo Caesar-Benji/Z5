@@ -5,7 +5,10 @@ import { supabase } from "../supabase";
 import { Panel, PageHeader, Btn, Badge, Mono } from "../ui";
 import { useIsMobile } from "../useIsMobile";
 import { C, FONT_MONO } from "../theme";
-import { MISSION_STATUS_LABELS, MISSION_STATUS_TONES } from "../missionTemplate";
+import {
+  MISSION_STATUS_LABELS, MISSION_STATUS_TONES,
+  MISSION_KINDS, MISSION_KIND_ICONS,
+} from "../missionTemplate";
 
 // Squad leader, officer and admin can author missions.
 function canCreateMissions(role) {
@@ -19,6 +22,7 @@ export default function Missions({ onOpenMission, onCreateMission }) {
   const [squads, setSquads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [kindFilter, setKindFilter] = useState("all"); // 'all' | 'operational' | 'admin'
 
   const load = useCallback(async () => {
     setLoading(true); setErr("");
@@ -59,6 +63,22 @@ export default function Missions({ onOpenMission, onCreateMission }) {
       />
 
       <Panel>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+          <Btn small active={kindFilter === "all"} onClick={() => setKindFilter("all")}>
+            All
+          </Btn>
+          {MISSION_KINDS.map((k) => (
+            <Btn
+              key={k.key}
+              small
+              active={kindFilter === k.key}
+              onClick={() => setKindFilter(k.key)}
+            >
+              {k.icon} {k.label}
+            </Btn>
+          ))}
+        </div>
+
         {loading && <div style={{ color: C.dim, fontSize: 13 }}>Loading…</div>}
         {err && <div style={{ color: C.error, fontSize: 13 }}>{err}</div>}
         {!loading && missions.length === 0 && (
@@ -66,14 +86,16 @@ export default function Missions({ onOpenMission, onCreateMission }) {
             No missions scheduled.
           </div>
         )}
-        {missions.map((m) => (
-          <MissionRow
-            key={m.id}
-            mission={m}
-            squadName={squadName(m.squad_id)}
-            onOpen={() => onOpenMission(m.id)}
-          />
-        ))}
+        {missions
+          .filter((m) => kindFilter === "all" || (m.kind || "operational") === kindFilter)
+          .map((m) => (
+            <MissionRow
+              key={m.id}
+              mission={m}
+              squadName={squadName(m.squad_id)}
+              onOpen={() => onOpenMission(m.id)}
+            />
+          ))}
       </Panel>
     </>
   );
@@ -82,7 +104,12 @@ export default function Missions({ onOpenMission, onCreateMission }) {
 function MissionRow({ mission, squadName, onOpen }) {
   const tone = MISSION_STATUS_TONES[mission.status] || "default";
   const label = MISSION_STATUS_LABELS[mission.status] || mission.status;
-  const when = formatWhen(mission.scheduled_at);
+  const kind = mission.kind || "operational";
+  const icon = MISSION_KIND_ICONS[kind] || "✦";
+  const when = kind === "admin"
+    ? `DUE ${formatWhen(mission.due_at)}`
+    : formatWhen(mission.scheduled_at);
+  const squadText = mission.squad_id ? squadName : "WHOLE TEAM";
 
   return (
     <button
@@ -100,6 +127,13 @@ function MissionRow({ mission, squadName, onOpen }) {
         cursor: "pointer",
       }}
     >
+      <span aria-hidden style={{
+        color: kind === "admin" ? C.warn : C.bright,
+        fontSize: 18,
+        width: 20,
+        textAlign: "center",
+        flexShrink: 0,
+      }}>{icon}</span>
       <div style={{
         flex: 1,
         minWidth: 0,
@@ -126,7 +160,7 @@ function MissionRow({ mission, squadName, onOpen }) {
           overflow: "hidden",
           textOverflow: "ellipsis",
         }}>
-          <Mono style={{ color: C.text }}>{squadName}</Mono>
+          <Mono style={{ color: C.text }}>{squadText}</Mono>
           <span style={{ color: C.dimmer }}>·</span>
           <span style={{ fontFamily: FONT_MONO }}>{when}</span>
           {mission.location && (

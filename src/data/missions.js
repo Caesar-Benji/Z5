@@ -4,12 +4,13 @@ import { supabase } from "../supabase";
 
 // ---------- Mission list ---------------------------------------------
 
-export async function listMissions({ squadId, onlyUpcoming = false, limit = 50 } = {}) {
+export async function listMissions({ squadId, kind, onlyUpcoming = false, limit = 50 } = {}) {
   let q = supabase.from("missions")
     .select("*")
     .order("scheduled_at", { ascending: true, nullsFirst: false })
     .limit(limit);
   if (squadId) q = q.eq("squad_id", squadId);
+  if (kind)    q = q.eq("kind", kind);
   if (onlyUpcoming) {
     q = q.in("status", ["scheduled", "active"]);
   }
@@ -17,12 +18,29 @@ export async function listMissions({ squadId, onlyUpcoming = false, limit = 50 }
   return { data: data || [], error };
 }
 
+// Missions whose scheduled_at OR due_at falls inside [fromISO, toISO).
+// Used by the Calendar screen. RLS handles visibility filtering.
+export async function listMissionsInRange({ fromISO, toISO } = {}) {
+  if (!fromISO || !toISO) return { data: [], error: null };
+  const [{ data: a, error: e1 }, { data: b, error: e2 }] = await Promise.all([
+    supabase.from("missions").select("*")
+      .gte("scheduled_at", fromISO).lt("scheduled_at", toISO),
+    supabase.from("missions").select("*")
+      .gte("due_at", fromISO).lt("due_at", toISO),
+  ]);
+  if (e1) return { data: [], error: e1 };
+  if (e2) return { data: [], error: e2 };
+  const map = new Map();
+  for (const m of [...(a || []), ...(b || [])]) map.set(m.id, m);
+  return { data: Array.from(map.values()), error: null };
+}
+
 // Missions the current operator is personally assigned to.
 export async function listMyUpcomingMissions(userId, { limit = 5 } = {}) {
   if (!userId) return { data: [], error: null };
   const { data: mops, error: e1 } = await supabase
     .from("mission_operators")
-    .select("mission_id, role")
+    .select("mission_id, role, done")
     .eq("user_id", userId);
   if (e1) return { data: [], error: e1 };
   const ids = (mops || []).map((m) => m.mission_id);
@@ -37,9 +55,14 @@ export async function listMyUpcomingMissions(userId, { limit = 5 } = {}) {
     .limit(limit);
   if (error) return { data: [], error };
 
-  // Join role locally.
-  const roleByMission = Object.fromEntries((mops || []).map((m) => [m.mission_id, m.role]));
-  const enriched = (data || []).map((m) => ({ ...m, my_role: roleByMission[m.id] }));
+  const byMission = Object.fromEntries(
+    (mops || []).map((m) => [m.mission_id, { role: m.role, done: m.done }])
+  );
+  const enriched = (data || []).map((m) => ({
+    ...m,
+    my_role: byMission[m.id]?.role ?? null,
+    my_done: !!byMission[m.id]?.done,
+  }));
   return { data: enriched, error: null };
 }
 
@@ -52,7 +75,7 @@ export async function getMission(missionId) {
       .select("*").eq("mission_id", missionId)
       .order("section").order("order_no"),
     supabase.from("mission_operators")
-      .select("mission_id, user_id, role, profiles!inner(id, callsign, full_name, role)")
+      .select("mission_id, user_id, role, done, done_at, profiles!inner(id, callsign, full_name, role)")
       .eq("mission_id", missionId),
   ]);
   if (e1) return { error: e1 };
@@ -63,6 +86,8 @@ export async function getMission(missionId) {
     operators: (opsResp.data || []).map((o) => ({
       user_id: o.user_id,
       role: o.role,
+      done: !!o.done,
+      done_at: o.done_at,
       callsign: o.profiles?.callsign,
       full_name: o.profiles?.full_name,
       profile_role: o.profiles?.role,
@@ -95,17 +120,35 @@ export async function getAllChecklistState(missionId) {
 
 export async function createMission({
   name, squadId, scheduledAt, location, notes, operators, items,
+  kind = "operational", dueAt = null,
 }) {
   const { data, error } = await supabase.rpc("create_mission", {
     p_name:         name,
-    p_squad_id:     squadId,
+    p_squad_id:     squadId || null,
     p_scheduled_at: scheduledAt || null,
     p_location:     location || "",
     p_notes:        notes || "",
     p_operators:    operators || [],
-    p_items:        items || null,
+    p_items:        kind === "admin" ? null : (items || null),
+    p_kind:         kind,
+    p_due_at:       dueAt || null,
   });
   return { data, error };
+}
+
+export async function setAdminTaskDone({ missionId, done }) {
+  const { error } = await supabase.rpc("set_admin_task_done", {
+    p_mission_id: missionId,
+    p_done:       done,
+  });
+  return { error };
+}
+
+export async function getAdminTaskReadiness(missionId) {
+  const { data, error } = await supabase.rpc("admin_task_readiness", {
+    p_mission_id: missionId,
+  });
+  return { data: data || [], error };
 }
 
 export async function toggleChecklistItem({ missionId, itemId, checked }) {
