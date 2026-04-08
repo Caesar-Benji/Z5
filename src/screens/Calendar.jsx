@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { listMissionsInRange } from "../data/missions";
 import { Panel, PageHeader, Btn, Badge, Mono } from "../ui";
 import { useIsMobile } from "../useIsMobile";
-import { C, FONT_MONO } from "../theme";
+import { C, FONT_MONO, S } from "../theme";
 import {
   MISSION_STATUS_LABELS, MISSION_STATUS_TONES,
   MISSION_KIND_LABELS, MISSION_KIND_ICONS,
@@ -75,23 +75,41 @@ export default function Calendar({ onOpenMission }) {
 
   const monthLabel = cursor.toLocaleString([], { month: "long", year: "numeric" }).toUpperCase();
 
+  // Fills whatever vertical space the AppShell main area gives us.
+  // Desktop main padding is 32px top + 32px bottom; mobile is 18px + tab bar.
+  const rootStyle = isMobile
+    ? { display: "flex", flexDirection: "column", minHeight: 0 }
+    : {
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        height: "calc(100vh - 64px)",
+      };
+
   return (
-    <>
+    <div style={rootStyle}>
       <PageHeader
         title="Calendar"
         subtitle="Missions, admin tasks and upcoming activities."
-        action={
-          <Btn onClick={goToday} fullWidth={isMobile}>Today</Btn>
-        }
+        action={<Btn onClick={goToday} fullWidth={isMobile}>Today</Btn>}
       />
 
-      <Panel>
+      <div style={{
+        ...S.panel,
+        flex: 1,
+        minHeight: 0,
+        marginBottom: selectedDay ? 16 : 0,
+        display: "flex",
+        flexDirection: "column",
+        padding: isMobile ? "14px 12px" : "18px 22px",
+      }}>
         <div style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 10,
-          marginBottom: 14,
+          marginBottom: 10,
+          flexShrink: 0,
         }}>
           <Btn small onClick={prevMonth}>‹ Prev</Btn>
           <div style={{
@@ -115,33 +133,28 @@ export default function Calendar({ onOpenMission }) {
         />
 
         {loading && (
-          <div style={{ color: C.dim, fontSize: 12, marginTop: 10 }}>Loading…</div>
+          <div style={{ color: C.dim, fontSize: 11, marginTop: 6, flexShrink: 0 }}>Loading…</div>
         )}
-      </Panel>
+      </div>
 
-      <Panel title={selectedDay
-        ? dayHeader(selectedDay)
-        : "Select a day"}>
-        {!selectedDay && (
-          <div style={{ color: C.dim, fontSize: 13 }}>
-            Tap a date above to see its activities.
-          </div>
-        )}
-        {selectedDay && (() => {
-          const list = eventsByDay.get(dayKey(selectedDay)) || [];
-          if (list.length === 0) {
-            return <div style={{ color: C.dim, fontSize: 13 }}>No activities scheduled.</div>;
-          }
-          return list.map((e) => (
-            <DayEventRow
-              key={e.key}
-              event={e}
-              onOpen={() => onOpenMission && onOpenMission(e.mission.id)}
-            />
-          ));
-        })()}
-      </Panel>
-    </>
+      {selectedDay && (
+        <Panel title={dayHeader(selectedDay)}>
+          {(() => {
+            const list = eventsByDay.get(dayKey(selectedDay)) || [];
+            if (list.length === 0) {
+              return <div style={{ color: C.dim, fontSize: 13 }}>No activities scheduled.</div>;
+            }
+            return list.map((e) => (
+              <DayEventRow
+                key={e.key}
+                event={e}
+                onOpen={() => onOpenMission && onOpenMission(e.mission.id)}
+              />
+            ));
+          })()}
+        </Panel>
+      )}
+    </div>
   );
 }
 
@@ -163,12 +176,18 @@ function MonthGrid({ cursor, today, selectedDay, eventsByDay, onSelect }) {
   const dayNames = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
 
   return (
-    <div>
+    <div style={{
+      flex: 1,
+      minHeight: 0,
+      display: "flex",
+      flexDirection: "column",
+    }}>
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(7, 1fr)",
         gap: 2,
         marginBottom: 4,
+        flexShrink: 0,
       }}>
         {dayNames.map((d) => (
           <div key={d} style={{
@@ -184,8 +203,11 @@ function MonthGrid({ cursor, today, selectedDay, eventsByDay, onSelect }) {
         ))}
       </div>
       <div style={{
+        flex: 1,
+        minHeight: 0,
         display: "grid",
         gridTemplateColumns: "repeat(7, 1fr)",
+        gridTemplateRows: "repeat(6, minmax(0, 1fr))",
         gap: 2,
       }}>
         {cells.map((d) => {
@@ -225,7 +247,6 @@ function DayCell({ date, inMonth, isToday, isSelected, events, onClick, isMobile
       style={{
         all: "unset",
         cursor: "pointer",
-        aspectRatio: "1 / 1",
         padding: isMobile ? 4 : 6,
         background: bg,
         border: `1px solid ${isSelected ? C.bright : isToday ? C.borderBright : C.border}`,
@@ -233,7 +254,9 @@ function DayCell({ date, inMonth, isToday, isSelected, events, onClick, isMobile
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        minHeight: isMobile ? 44 : 58,
+        minHeight: 0,
+        minWidth: 0,
+        overflow: "hidden",
         opacity: inMonth ? 1 : 0.35,
       }}
     >
