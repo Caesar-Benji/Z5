@@ -7,11 +7,15 @@ import Home from "./Home";
 import Profile from "./Profile";
 import Gear from "./Gear";
 import Roster from "./Roster";
+import Missions from "./Missions";
+import MissionCreate from "./MissionCreate";
+import Checklist from "./Checklist";
 
 const NAV_MAIN = [
-  { key: "home",   label: "Home",   icon: "◉" },
-  { key: "gear",   label: "Gear",   icon: "▣" },
-  { key: "roster", label: "Roster", icon: "▦" },
+  { key: "home",     label: "Home",     icon: "◉" },
+  { key: "missions", label: "Missions", icon: "✦" },
+  { key: "gear",     label: "Gear",     icon: "▣" },
+  { key: "roster",   label: "Roster",   icon: "▦" },
 ];
 
 const NAV_ACCOUNT = [
@@ -24,7 +28,18 @@ const MOBILE_TABS = [...NAV_MAIN, ...NAV_ACCOUNT];
 export default function Shell() {
   const { profile, signOut } = useAuth();
   const [view, setView] = useState("home");
+  // Sub-view state within the Missions tab: "list" | "create" | "detail".
+  const [missionView, setMissionView] = useState("list");
+  const [activeMissionId, setActiveMissionId] = useState(null);
   const isMobile = useIsMobile();
+
+  function goTab(key) {
+    setView(key);
+    if (key === "missions") {
+      setMissionView("list");
+      setActiveMissionId(null);
+    }
+  }
 
   // ------- Desktop sidebar -------
   const sidebar = (
@@ -61,14 +76,14 @@ export default function Shell() {
 
       <NavLabel>Navigation</NavLabel>
       {NAV_MAIN.map(n => (
-        <NavItem key={n.key} active={view === n.key} onClick={() => setView(n.key)}>
+        <NavItem key={n.key} active={view === n.key} onClick={() => goTab(n.key)}>
           {n.label}
         </NavItem>
       ))}
 
       <NavLabel>Account</NavLabel>
       {NAV_ACCOUNT.map(n => (
-        <NavItem key={n.key} active={view === n.key} onClick={() => setView(n.key)}>
+        <NavItem key={n.key} active={view === n.key} onClick={() => goTab(n.key)}>
           {n.label}
         </NavItem>
       ))}
@@ -189,13 +204,46 @@ export default function Shell() {
         <TabItem
           key={t.key}
           active={view === t.key}
-          onClick={() => setView(t.key)}
+          onClick={() => goTab(t.key)}
           icon={t.icon}
           label={t.label}
         />
       ))}
     </>
   );
+
+  // ------- Missions sub-router -------
+  function renderMissions() {
+    if (missionView === "create") {
+      return (
+        <MissionCreate
+          onCreated={(id) => {
+            if (id) {
+              setActiveMissionId(id);
+              setMissionView("detail");
+            } else {
+              setMissionView("list");
+            }
+          }}
+          onCancel={() => setMissionView("list")}
+        />
+      );
+    }
+    if (missionView === "detail" && activeMissionId) {
+      return (
+        <Checklist
+          missionId={activeMissionId}
+          onBack={() => { setMissionView("list"); setActiveMissionId(null); }}
+        />
+      );
+    }
+    return (
+      <Missions
+        onOpenMission={(id) => { setActiveMissionId(id); setMissionView("detail"); }}
+        onCreateMission={() => setMissionView("create")}
+      />
+    );
+  }
 
   return (
     <Page>
@@ -204,10 +252,20 @@ export default function Shell() {
         mobileTopBar={isMobile ? mobileTopBar : null}
         mobileTabBar={isMobile ? mobileTabBar : null}
       >
-        {view === "home"    && <Home />}
-        {view === "gear"    && <Gear />}
-        {view === "roster"  && <Roster />}
-        {view === "profile" && <Profile />}
+        {view === "home"     && (
+          <Home
+            onOpenMission={(id) => {
+              setActiveMissionId(id);
+              setMissionView("detail");
+              setView("missions");
+            }}
+            onGoMissions={() => { setMissionView("list"); setView("missions"); }}
+          />
+        )}
+        {view === "missions" && renderMissions()}
+        {view === "gear"     && <Gear />}
+        {view === "roster"   && <Roster />}
+        {view === "profile"  && <Profile />}
       </AppShell>
     </Page>
   );
