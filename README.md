@@ -1,40 +1,49 @@
 # Z5 TERMINAL
 
-Internal sniper team operations environment. Phase 1: authentication, squads,
-roles, and personal gear inventory. Phase 2 will add missions and checklists.
-Phase 3 will add notifications.
+Internal team operations platform — mission planning, equipment tracking, squad
+management, and operational checklists. Built as a lightweight field-terminal UI
+with a retro CRT aesthetic.
+
+**Live:** Deployed via GitHub Pages with automated CI/CD.
 
 ## Stack
 
 - React 18 + Vite
-- Supabase (Auth + Postgres + Realtime)
-- White-on-black terminal aesthetic, monospace, CRT scanlines
+- Supabase (Auth + Postgres + Realtime + RLS)
+- Terminal aesthetic: monospace typography, CRT scanline overlay
+
+## Features
+
+- Role-based access control (Admin, Officer, Squad Leader, Operator)
+- Squad lifecycle management with status tracking
+- Mission creation, assignment, and checklist progress
+- Announcement broadcasting
+- Personal equipment registry with model/serial tracking
+- Interactive calendar with mission scheduling
+- Realtime updates via Supabase subscriptions
 
 ## Roles
 
-- **ADMIN** — full control. First user to sign up with `benjaminaidinov@gmail.com`
-  is automatically promoted to admin (no invite code needed).
-- **TEAM OFFICER** — cross-squad authority. Manages squads, generates invites,
+- **ADMIN** — full platform control, all squads and members visible.
+- **OFFICER** — cross-squad authority. Manages squads, generates invites,
   views all members.
-- **SQUAD LEADER** — manages their own squad. Can generate invite codes for
-  snipers in their own squad.
-- **SNIPER** — manages their own profile and gear inventory.
+- **SQUAD LEADER** — manages their own squad. Can generate invite codes and
+  create missions.
+- **OPERATOR** — manages own profile, gear inventory, and mission checklists.
 
-## One-time setup
+## Setup
 
-### 1. Run the schema in Supabase
+### 1. Database
 
-Open Supabase → SQL Editor → New query → paste `schema_v2.sql` → **Run**.
-This drops the legacy v1 tables and rebuilds the v2 schema with auth wiring,
-RLS policies, the signup trigger, and the invite-redemption RPC.
+Run the latest schema SQL file in Supabase → SQL Editor → New query → **Run**.
 
-### 2. Set environment variables
+### 2. Environment variables
 
 ```
 cp .env.example .env
 ```
 
-The example file already contains the project URL and anon key.
+Update with your Supabase project URL and anon key.
 
 ### 3. Install and run
 
@@ -43,66 +52,56 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173
+Open `http://localhost:5173`
 
-## Bootstrap (first run)
+## First-run bootstrap
 
-1. Click **[ NEW OPERATOR ]** on the login screen.
-2. Enter email `benjaminaidinov@gmail.com`, a password, and a callsign.
-   The form detects the bootstrap email and skips the invite code requirement.
-3. Click **[ REGISTER ]**.
-4. Switch to **[ LOGIN ]** and sign in with the same email + password.
-   You're now in as ADMIN.
-5. Go to **[ ROSTER ]** → **REGISTER NEW SQUAD** → create your first squad
-   (e.g. `WRAITH`).
-6. In **INVITE CODES**, pick the squad and role, click **[ GENERATE CODE ]**.
-   Share that code with the operator.
-7. The operator clicks **[ NEW OPERATOR ]**, enters their email, password,
-   callsign, and the invite code → they get assigned to the squad with the
-   correct role automatically.
+1. The first registered account is automatically promoted to **ADMIN**.
+2. Sign in, navigate to **ROSTER**, and create your first squad.
+3. Generate invite codes and distribute to team members.
+4. Operators register with their invite code and are assigned to the
+   correct squad and role automatically.
 
-## Deploying to GitHub Pages
+## Deployment
 
-A GitHub Actions workflow at `.github/workflows/deploy.yml` builds the app and
-publishes to GitHub Pages on every push to `main`. The Vite `base` path is
-`/Z5/` so the repo MUST be named exactly `Z5`.
+A GitHub Actions workflow (`.github/workflows/deploy.yml`) builds and publishes
+to GitHub Pages on every push to `main`. The Vite `base` path is set to match
+the repository name.
 
-One-time setup:
+One-time GitHub setup: **Settings → Pages → Source → GitHub Actions**.
 
-1. Create a **public** GitHub repo named exactly `Z5`.
-2. Push this folder to it:
-   ```
-   git remote set-url origin https://github.com/<your-user>/Z5.git
-   git add -A
-   git commit -m "Z5 phase 1: auth, squads, roles, gear"
-   git push -u origin main --force
-   ```
-3. In the GitHub repo: **Settings → Pages → Build and deployment → Source**
-   set to **GitHub Actions**.
-4. Watch the build under the **Actions** tab. When green, the app is live at:
-   `https://<your-user>.github.io/Z5/`
-
-## Files
+## Project structure
 
 ```
-schema_v2.sql              -- run once in Supabase
-src/main.jsx               -- React entry
-src/App.jsx                -- top-level routing (auth gate)
-src/supabase.js            -- supabase client + bootstrap email
-src/auth.jsx               -- AuthProvider + useAuth + role helpers
-src/theme.js               -- color palette + style atoms
-src/ui.jsx                 -- shared UI primitives (Btn, Input, Panel, ...)
-src/screens/Auth.jsx       -- login + signup
-src/screens/Shell.jsx      -- post-login navigation
-src/screens/Profile.jsx    -- own identity + password change
-src/screens/Gear.jsx       -- own gear inventory
-src/screens/Roster.jsx     -- squads + members + invite codes
+src/
+  main.jsx              — React entry point
+  App.jsx               — Top-level routing and auth gate
+  supabase.js           — Supabase client configuration
+  auth.jsx              — AuthProvider, useAuth, role helpers
+  theme.js              — Color palette and style atoms
+  ui.jsx                — Shared UI primitives (Btn, Input, Panel, …)
+  missionTemplate.js    — Mission type definitions and task templates
+  screens/
+    Auth.jsx            — Login and registration
+    Shell.jsx           — Post-login navigation shell
+    Home.jsx            — Dashboard (upcoming missions, announcements)
+    Calendar.jsx        — Monthly calendar with mission overlay
+    Missions.jsx        — Mission list and announcement composer
+    MissionCreate.jsx   — Mission creation form
+    Checklist.jsx       — Mission detail, task checklist, delete flow
+    Profile.jsx         — Identity, gear inventory, password management
+    Gear.jsx            — Personal equipment registry
+    Roster.jsx          — Squad management and invite codes (admin/officer)
 ```
 
 ## Roadmap
 
-**Phase 1 (this build)** — auth, squads, roles, gear inventory.
-**Phase 2** — missions linked to squads, per-mission checklist progress, squad
-roll-up view of mission readiness.
-**Phase 3** — notifications: in-app feed + live banner, real-time via
-Supabase Realtime, broadcast or per-squad targeting.
+**Phase 1** — Authentication, squads, roles, gear inventory.
+**Phase 2** *(current)* — Missions, checklists, calendar, announcements, squad
+lifecycle status.
+**Phase 3** — Training course module: cohorts, lesson modules, attendance
+tracking, trainee dashboard.
+
+## License
+
+Internal use only. Not for public distribution.
