@@ -20,29 +20,21 @@ export default function Home({ onOpenMission, onGoMissions }) {
   const isMobile = useIsMobile();
 
   const [missions, setMissions] = useState([]);
-  const [missionProgress, setMissionProgress] = useState({}); // id -> { checked, total }
+  const [missionProgress, setMissionProgress] = useState({});
   const [announcements, setAnnouncements] = useState([]);
-  const [squadMembers, setSquadMembers] = useState([]);
-  const [gearCount, setGearCount] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!profile?.id) return;
     setLoading(true);
 
-    // Upcoming missions for this user
     const { data: upcoming } = await listMyUpcomingMissions(profile.id, { limit: 5 });
     setMissions(upcoming || []);
 
-    // Per-mission progress for each
     const progress = {};
     for (const m of upcoming || []) {
       if ((m.kind || "operational") === "admin") {
-        // Admin tasks: progress is just my done flag (1/1 or 0/1).
-        progress[m.id] = {
-          checked: m.my_done ? 1 : 0,
-          total:   1,
-        };
+        progress[m.id] = { checked: m.my_done ? 1 : 0, total: 1 };
         continue;
       }
       const [{ items }, { data: st }] = await Promise.all([
@@ -57,35 +49,14 @@ export default function Home({ onOpenMission, onGoMissions }) {
     }
     setMissionProgress(progress);
 
-    // Recent announcements
     const { data: ann } = await listRecentAnnouncements({ limit: 5 });
     setAnnouncements(ann || []);
 
-    // Squad members
-    if (profile.squad_id) {
-      const { data: members } = await supabase
-        .from("profiles")
-        .select("id, callsign, full_name, role")
-        .eq("squad_id", profile.squad_id)
-        .order("callsign", { ascending: true });
-      setSquadMembers(members || []);
-    } else {
-      setSquadMembers([]);
-    }
-
-    // Gear count
-    const { count } = await supabase
-      .from("gear")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", profile.id);
-    setGearCount(typeof count === "number" ? count : null);
-
     setLoading(false);
-  }, [profile?.id, profile?.squad_id]);
+  }, [profile?.id]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Subscribe to announcements for live updates
   useEffect(() => {
     const unsub = subscribeAnnouncements(() => {
       listRecentAnnouncements({ limit: 5 }).then(({ data }) => setAnnouncements(data || []));
@@ -93,15 +64,9 @@ export default function Home({ onOpenMission, onGoMissions }) {
     return () => { unsub && unsub(); };
   }, []);
 
-  // Aggregate personal readiness across upcoming missions
-  const personal = useMemo(() => {
-    const vals = Object.values(missionProgress);
-    const missionCount = missions.length;
-    const totalItems = vals.reduce((n, v) => n + v.total, 0);
-    const checked = vals.reduce((n, v) => n + v.checked, 0);
-    const avgPct = totalItems ? Math.round((checked / totalItems) * 100) : null;
-    return { missionCount, avgPct, totalItems, checked };
-  }, [missionProgress, missions]);
+  const hasMissions      = missions.length > 0;
+  const hasAnnouncements = announcements.length > 0;
+  const isEmpty          = !loading && !hasMissions && !hasAnnouncements;
 
   return (
     <>
@@ -110,21 +75,19 @@ export default function Home({ onOpenMission, onGoMissions }) {
         subtitle={`Role: ${roleLabel(profile?.role)}${profile?.squad_id ? "" : " · no squad assigned"}`}
       />
 
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: isMobile
-          ? "1fr"
-          : "repeat(auto-fit, minmax(320px, 1fr))",
-        gap: isMobile ? 14 : 20,
-      }}>
+      {isEmpty && (
+        <Panel>
+          <div style={{ color: C.dim, fontSize: 14, lineHeight: 1.6, padding: "12px 0" }}>
+            No missions or announcements at this time. Stand by.
+          </div>
+        </Panel>
+      )}
+
+      {hasMissions && (
         <Panel
-          title="Upcoming missions"
+          title="⌖  Upcoming missions"
           action={<Btn small onClick={onGoMissions}>View all</Btn>}
         >
-          {loading && <EmptyState>Loading…</EmptyState>}
-          {!loading && missions.length === 0 && (
-            <EmptyState>No missions assigned. Your squad leader will assign you.</EmptyState>
-          )}
           {missions.map((m) => {
             const p = missionProgress[m.id] || { checked: 0, total: 0 };
             const pct = p.total ? Math.round((p.checked / p.total) * 100) : 0;
@@ -140,83 +103,21 @@ export default function Home({ onOpenMission, onGoMissions }) {
             );
           })}
         </Panel>
+      )}
 
-        <Panel title="Personal readiness">
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <Row label="Gear logged" value={gearCount === null ? "—" : String(gearCount)} />
-            <Row label="Upcoming missions" value={String(personal.missionCount)} />
-            <Row
-              label="Avg checklist completion"
-              value={personal.avgPct === null ? "—" : `${personal.avgPct}%`}
-            />
-            <div style={{ marginTop: 4 }}>
-              {personal.missionCount === 0 && <Badge tone="warn">No missions assigned</Badge>}
-              {personal.missionCount > 0 && personal.avgPct === 100 && <Badge tone="ok">All ready</Badge>}
-              {personal.missionCount > 0 && personal.avgPct !== null && personal.avgPct < 100 && (
-                <Badge tone="warn">{100 - personal.avgPct}% remaining</Badge>
-              )}
-            </div>
-          </div>
-        </Panel>
-
-        <Panel title="My squad status">
-          {!profile?.squad_id && (
-            <div style={{ padding: "12px 0", color: C.warn, fontSize: 14 }}>
-              You are not assigned to a squad yet.<br />
-              <span style={{ color: C.dim, fontSize: 13 }}>
-                Admin or squad leader must invite you via an invite code.
-              </span>
-            </div>
-          )}
-          {profile?.squad_id && squadMembers.length === 0 && (
-            <EmptyState>No squad members loaded.</EmptyState>
-          )}
-          {profile?.squad_id && squadMembers.map((m) => (
-            <div key={m.id} style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "8px 0",
-              borderBottom: `1px solid ${C.border}`,
-              gap: 10,
-            }}>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{
-                  fontFamily: FONT_MONO,
-                  color: m.id === profile.id ? C.bright : C.text,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  letterSpacing: "0.3px",
-                }}>
-                  {m.callsign || "—"}
-                </div>
-                <div style={{
-                  color: C.dim,
-                  fontSize: 12,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}>
-                  {m.full_name || <span style={{ color: C.dimmer }}>—</span>}
-                </div>
-              </div>
-              <Badge tone={m.role === "squad_leader" ? "bright" : "default"}>
-                {roleLabel(m.role)}
-              </Badge>
-            </div>
-          ))}
-        </Panel>
-
-        <Panel title="Recent updates">
-          {loading && <EmptyState>Loading…</EmptyState>}
-          {!loading && announcements.length === 0 && (
-            <EmptyState>No announcements yet.</EmptyState>
-          )}
+      {hasAnnouncements && (
+        <Panel title="◈  Announcements">
           {announcements.map((a) => (
             <AnnouncementRow key={a.id} a={a} />
           ))}
         </Panel>
-      </div>
+      )}
+
+      {loading && !hasMissions && !hasAnnouncements && (
+        <Panel>
+          <div style={{ color: C.dim, fontSize: 13 }}>Loading…</div>
+        </Panel>
+      )}
     </>
   );
 }
@@ -290,11 +191,7 @@ function MissionCardRow({ mission, pct, checked, total, onClick }) {
           </>
         )}
       </div>
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-      }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{
           flex: 1,
           height: 6,
@@ -361,32 +258,6 @@ function AnnouncementRow({ a }) {
         {formatWhen(a.posted_at)}
       </div>
     </div>
-  );
-}
-
-function Row({ label, value }) {
-  return (
-    <div style={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingBottom: 10,
-      borderBottom: `1px solid ${C.border}`,
-    }}>
-      <span style={{ color: C.dim, fontSize: 13 }}>{label}</span>
-      <span style={{ color: C.bright, fontWeight: 600 }}>{value}</span>
-    </div>
-  );
-}
-
-function EmptyState({ children }) {
-  return (
-    <div style={{
-      color: C.dim,
-      fontSize: 13,
-      lineHeight: 1.6,
-      padding: "8px 0",
-    }}>{children}</div>
   );
 }
 

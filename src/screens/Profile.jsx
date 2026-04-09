@@ -52,15 +52,18 @@ export default function Profile() {
     <>
       <PageHeader
         title="Profile"
-        subtitle="Your identity, gear and settings."
+        subtitle="Gear, identity and settings."
       />
+
+      {/* Personal gear inventory — top priority */}
+      <Gear />
 
       <div style={{
         display: "grid",
         gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(360px, 1fr))",
         gap: isMobile ? 14 : 20,
       }}>
-        <Panel title="Identity">
+        <Panel title={<><SoldierIcon /> Identity</>}>
           <form onSubmit={saveProfile}>
             <Field label="Email">
               <Input value={profile?.email || ""} readOnly />
@@ -82,7 +85,7 @@ export default function Profile() {
           </form>
         </Panel>
 
-        <Panel title="Password">
+        <Panel title={<><LockIcon /> Password</>}>
           <form onSubmit={changePassword}>
             <Field label="New password">
               <Input type="password" value={pw} onChange={(e) => setPw(e.target.value)} />
@@ -98,15 +101,46 @@ export default function Profile() {
         </Panel>
       </div>
 
-      {/* Personal gear — was its own tab, now lives under Profile */}
-      <Gear />
-
-      {/* Mobile sign out — desktop has it in sidebar */}
+      {/* Mobile sign out */}
       {isMobile && (
         <div style={{ marginTop: 24 }}>
           <Btn fullWidth onClick={signOut}>Log out</Btn>
         </div>
       )}
     </>
+  );
+}
+
+// ---------- Inline SVG icons for section titles ----------------------
+
+function SoldierIcon() {
+  return (
+    <svg
+      width="16" height="16" viewBox="0 0 16 16" fill="none"
+      style={{ verticalAlign: "middle", marginRight: 8, opacity: 0.8 }}
+    >
+      {/* Head */}
+      <circle cx="8" cy="4" r="2.5" stroke="currentColor" strokeWidth="1.2" />
+      {/* Helmet brim */}
+      <path d="M5 3.5 Q8 1.5 11 3.5" stroke="currentColor" strokeWidth="1" fill="none" />
+      {/* Body / torso */}
+      <path d="M4 15 L4 10 Q4 8 8 8 Q12 8 12 10 L12 15" stroke="currentColor" strokeWidth="1.2" fill="none" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg
+      width="16" height="16" viewBox="0 0 16 16" fill="none"
+      style={{ verticalAlign: "middle", marginRight: 8, opacity: 0.8 }}
+    >
+      {/* Lock body */}
+      <rect x="3" y="7" width="10" height="7" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      {/* Shackle */}
+      <path d="M5.5 7 V5 Q5.5 2 8 2 Q10.5 2 10.5 5 V7" stroke="currentColor" strokeWidth="1.2" fill="none" />
+      {/* Keyhole */}
+      <circle cx="8" cy="11" r="1" fill="currentColor" />
+    </svg>
   );
 }

@@ -147,6 +147,26 @@ const DEFAULT_SLOTS = [
   "NVG / thermal",
 ];
 
+function RifleIcon() {
+  return (
+    <svg
+      width="16" height="16" viewBox="0 0 16 16" fill="none"
+      style={{ verticalAlign: "middle", marginRight: 8, opacity: 0.8 }}
+    >
+      {/* Barrel */}
+      <line x1="1" y1="5" x2="12" y2="5" stroke="currentColor" strokeWidth="1.2" />
+      {/* Receiver body */}
+      <rect x="6" y="3.5" width="6" height="3" rx="0.5" stroke="currentColor" strokeWidth="1" fill="none" />
+      {/* Scope */}
+      <rect x="3" y="2" width="5" height="2" rx="1" stroke="currentColor" strokeWidth="1" fill="none" />
+      {/* Trigger guard */}
+      <path d="M9 6.5 L9 9 Q9 10 10 10 L11 10" stroke="currentColor" strokeWidth="1" fill="none" />
+      {/* Stock */}
+      <line x1="12" y1="5" x2="15" y2="7" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
 export default function Gear() {
   const { session } = useAuth();
   const userId = session?.user?.id;
@@ -200,7 +220,7 @@ export default function Gear() {
   return (
     <>
       <PageHeader
-        title="Personal gear inventory"
+        title={<><RifleIcon /> Personal gear inventory</>}
         subtitle="Register every piece of gear with model and serial number."
         action={<Btn onClick={addRow} fullWidth={isMobile}>+ Add row</Btn>}
       />

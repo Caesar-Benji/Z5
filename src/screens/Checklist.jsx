@@ -139,8 +139,9 @@ export default function Checklist({ missionId, onBack }) {
   if (loading) {
     return (
       <>
-        <PageHeader title="Mission" action={<Btn onClick={onBack} fullWidth={isMobile}>Back</Btn>} />
+        <PageHeader title="Mission" />
         <Panel><div style={{ color: C.dim, fontSize: 13 }}>Loading mission…</div></Panel>
+        <Btn onClick={onBack} fullWidth={isMobile}>← Back to missions</Btn>
       </>
     );
   }
@@ -148,10 +149,11 @@ export default function Checklist({ missionId, onBack }) {
   if (!mission) {
     return (
       <>
-        <PageHeader title="Mission" action={<Btn onClick={onBack} fullWidth={isMobile}>Back</Btn>} />
+        <PageHeader title="Mission" />
         <Panel>
           <ErrLine>{err || "Mission not found."}</ErrLine>
         </Panel>
+        <Btn onClick={onBack} fullWidth={isMobile}>← Back to missions</Btn>
       </>
     );
   }
@@ -185,7 +187,6 @@ export default function Checklist({ missionId, onBack }) {
       <PageHeader
         title={mission.name}
         subtitle={formatWhen(mission.scheduled_at) + (mission.location ? ` · ${mission.location}` : "")}
-        action={<Btn onClick={onBack} fullWidth={isMobile}>Back</Btn>}
       />
 
       {/* Mission meta / role / progress */}
@@ -318,6 +319,10 @@ export default function Checklist({ missionId, onBack }) {
           ))}
         </Panel>
       )}
+
+      <div style={{ marginTop: 8 }}>
+        <Btn onClick={onBack} fullWidth={isMobile}>← Back to missions</Btn>
+      </div>
     </>
   );
 }
@@ -493,7 +498,6 @@ function AdminTaskView({
       <PageHeader
         title={mission.name}
         subtitle={`Admin task · due ${formatWhen(mission.due_at)}${mission.location ? ` · ${mission.location}` : ""}`}
-        action={<Btn onClick={onBack} fullWidth={isMobile}>Back</Btn>}
       />
 
       <Panel>
@@ -601,6 +605,10 @@ function AdminTaskView({
           ))}
         </Panel>
       )}
+
+      <div style={{ marginTop: 8 }}>
+        <Btn onClick={onBack} fullWidth={isMobile}>← Back to missions</Btn>
+      </div>
     </>
   );
 }
