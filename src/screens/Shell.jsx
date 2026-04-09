@@ -311,7 +311,7 @@ export default function Shell() {
           />
         )}
         {view === "missions" && renderMissions()}
-        {view === "knowledge" && <Knowledge />}
+        {view === "knowledge" && <Knowledge isBootcamp={isBootcamp} />}
         {view === "profile" && <Profile />}
         {view === "roster" && isAdminOrOfficer && <Roster />}
       </AppShell>

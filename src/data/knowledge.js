@@ -3,14 +3,34 @@ import { supabase } from "../supabase";
 
 const BUCKET = "knowledge";
 
-export async function listMaterials({ category } = {}) {
+// Predefined subject categories
+export const SUBJECTS = [
+  { key: "wind",              label: "Wind" },
+  { key: "shooting_technique", label: "Shooting technique" },
+  { key: "physics",           label: "Physics" },
+  { key: "gear",              label: "Gear" },
+  { key: "camouflage",        label: "Camouflage" },
+  { key: "navigation",        label: "Navigation" },
+  { key: "communication",     label: "Communication" },
+  { key: "general",           label: "General" },
+];
+
+export const SUBJECT_MAP = Object.fromEntries(SUBJECTS.map((s) => [s.key, s.label]));
+
+export const WEEKS = [1, 2, 3, 4];
+
+export async function listMaterials({ category, week } = {}) {
   let q = supabase
     .from("knowledge_materials")
     .select("*")
+    .order("week", { ascending: true, nullsFirst: true })
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
   if (category && category !== "all") {
     q = q.eq("category", category);
+  }
+  if (week !== undefined && week !== null && week !== "all") {
+    q = q.eq("week", week);
   }
   const { data, error } = await q;
   return { data: data || [], error };
@@ -25,8 +45,7 @@ export async function listCategories() {
   return { data: unique, error: null };
 }
 
-export async function uploadMaterial({ file, title, description, category }) {
-  // 1. Upload file to storage
+export async function uploadMaterial({ file, title, description, category, week }) {
   const ts = Date.now();
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const filePath = `${ts}_${safeName}`;
@@ -36,7 +55,6 @@ export async function uploadMaterial({ file, title, description, category }) {
     .upload(filePath, file, { upsert: false });
   if (uploadErr) return { error: uploadErr };
 
-  // 2. Insert metadata row
   const { error: dbErr } = await supabase.from("knowledge_materials").insert({
     title: title.trim(),
     description: description.trim(),
@@ -44,6 +62,7 @@ export async function uploadMaterial({ file, title, description, category }) {
     file_name: file.name,
     file_path: filePath,
     file_size: file.size,
+    week: week || null,
   });
   if (dbErr) return { error: dbErr };
 
@@ -51,13 +70,11 @@ export async function uploadMaterial({ file, title, description, category }) {
 }
 
 export async function deleteMaterial(material) {
-  // 1. Delete file from storage
   const { error: storErr } = await supabase.storage
     .from(BUCKET)
     .remove([material.file_path]);
   if (storErr) console.warn("Storage delete failed:", storErr);
 
-  // 2. Delete metadata row
   const { error } = await supabase
     .from("knowledge_materials")
     .delete()
