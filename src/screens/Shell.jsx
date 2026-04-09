@@ -26,6 +26,7 @@ export default function Shell() {
   // Sub-view state within the Missions tab: "list" | "create" | "detail".
   const [missionView, setMissionView] = useState("list");
   const [activeMissionId, setActiveMissionId] = useState(null);
+  const [prefillDate, setPrefillDate] = useState(null); // Date passed from Calendar → MissionCreate
   const isMobile = useIsMobile();
 
   const isAdminOrOfficer = canManageSquads(profile?.role);
@@ -225,7 +226,9 @@ export default function Shell() {
     if (missionView === "create") {
       return (
         <MissionCreate
+          prefillDate={prefillDate}
           onCreated={(id) => {
+            setPrefillDate(null);
             if (id) {
               setActiveMissionId(id);
               setMissionView("detail");
@@ -233,7 +236,7 @@ export default function Shell() {
               setMissionView("list");
             }
           }}
-          onCancel={() => setMissionView("list")}
+          onCancel={() => { setPrefillDate(null); setMissionView("list"); }}
         />
       );
     }
@@ -273,7 +276,14 @@ export default function Shell() {
           />
         )}
         {view === "calendar" && (
-          <Calendar onOpenMission={openMission} />
+          <Calendar
+            onOpenMission={openMission}
+            onCreateForDate={(date) => {
+              setPrefillDate(date);
+              setMissionView("create");
+              setView("missions");
+            }}
+          />
         )}
         {view === "missions" && renderMissions()}
         {view === "profile" && <Profile />}

@@ -3,7 +3,7 @@ import { useAuth, roleLabel, canCreateInvites } from "../auth";
 import {
   getMission, getMyChecklistState, toggleChecklistItem,
   getMissionReadiness, subscribeMissionRealtime, updateMissionStatus,
-  setAdminTaskDone,
+  setAdminTaskDone, deleteMission,
 } from "../data/missions";
 import {
   Panel, PageHeader, Btn, Badge, Mono, ErrLine, OkLine,
@@ -116,6 +116,26 @@ export default function Checklist({ missionId, onBack }) {
     load();
   }
 
+  // Delete permission: creator, admin, officer, squad_leader.
+  function canDeleteMission(m) {
+    if (!m || !profile) return false;
+    if (m.created_by === profile.id) return true;
+    return ["admin", "officer", "squad_leader"].includes(profile.role);
+  }
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busyDelete, setBusyDelete] = useState(false);
+
+  async function handleDelete() {
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    setBusyDelete(true);
+    setErr("");
+    const { error } = await deleteMission(missionId);
+    setBusyDelete(false);
+    if (error) { setErr(String(error.message || error)); setConfirmDelete(false); return; }
+    onBack();
+  }
+
   if (loading) {
     return (
       <>
@@ -147,6 +167,12 @@ export default function Checklist({ missionId, onBack }) {
         canSeeRollup={canSeeRollup}
         onBack={onBack}
         reload={load}
+        canDelete={canDeleteMission(mission)}
+        onDelete={handleDelete}
+        confirmDelete={confirmDelete}
+        setConfirmDelete={setConfirmDelete}
+        busyDelete={busyDelete}
+        deleteErr={err}
       />
     );
   }
@@ -216,6 +242,27 @@ export default function Checklist({ missionId, onBack }) {
             )}
             {mission.status !== "cancelled" && (
               <Btn small disabled={busyStatus} onClick={() => setStatus("cancelled")}>
+                Cancel
+              </Btn>
+            )}
+          </div>
+        )}
+
+        {canDeleteMission(mission) && (
+          <div style={{ marginTop: 14 }}>
+            <Btn
+              small
+              disabled={busyDelete}
+              onClick={handleDelete}
+              style={{
+                color: confirmDelete ? "#ff4444" : C.dim,
+                borderColor: confirmDelete ? "#ff4444" : undefined,
+              }}
+            >
+              {busyDelete ? "Deleting…" : confirmDelete ? "Confirm delete" : "Delete mission"}
+            </Btn>
+            {confirmDelete && !busyDelete && (
+              <Btn small onClick={() => setConfirmDelete(false)} style={{ marginLeft: 8 }}>
                 Cancel
               </Btn>
             )}
@@ -415,7 +462,10 @@ function formatWhen(ts) {
 
 // ---------- Admin task view -------------------------------------------
 
-function AdminTaskView({ mission, operators, profile, isMobile, canSeeRollup, onBack, reload }) {
+function AdminTaskView({
+  mission, operators, profile, isMobile, canSeeRollup, onBack, reload,
+  canDelete, onDelete, confirmDelete, setConfirmDelete, busyDelete, deleteErr,
+}) {
   const myOp = operators.find((o) => o.user_id === profile?.id) || null;
   const isAssignee = !!myOp;
   const iAmDone = !!myOp?.done;
@@ -492,7 +542,28 @@ function AdminTaskView({ mission, operators, profile, isMobile, canSeeRollup, on
           </div>
         )}
 
-        <ErrLine>{err}</ErrLine>
+        {canDelete && (
+          <div style={{ marginTop: 14 }}>
+            <Btn
+              small
+              disabled={busyDelete}
+              onClick={onDelete}
+              style={{
+                color: confirmDelete ? "#ff4444" : C.dim,
+                borderColor: confirmDelete ? "#ff4444" : undefined,
+              }}
+            >
+              {busyDelete ? "Deleting…" : confirmDelete ? "Confirm delete" : "Delete task"}
+            </Btn>
+            {confirmDelete && !busyDelete && (
+              <Btn small onClick={() => setConfirmDelete(false)} style={{ marginLeft: 8 }}>
+                Cancel
+              </Btn>
+            )}
+          </div>
+        )}
+
+        <ErrLine>{err || deleteErr}</ErrLine>
       </Panel>
 
       {canSeeRollup && (

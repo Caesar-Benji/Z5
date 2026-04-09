@@ -12,7 +12,7 @@ import {
   MISSION_KINDS,
 } from "../missionTemplate";
 
-export default function MissionCreate({ onCreated, onCancel }) {
+export default function MissionCreate({ onCreated, onCancel, prefillDate }) {
   const { profile } = useAuth();
   const isMobile = useIsMobile();
 
@@ -20,8 +20,12 @@ export default function MissionCreate({ onCreated, onCancel }) {
 
   const [name, setName] = useState("");
   const [squadId, setSquadId] = useState(profile?.squad_id || "");
-  const [scheduledAt, setScheduledAt] = useState(defaultDateTime(2));
-  const [dueAt, setDueAt] = useState(defaultDateTime(24));
+  const [scheduledAt, setScheduledAt] = useState(
+    prefillDate ? dateToLocalInput(prefillDate, 9) : defaultDateTime(2)
+  );
+  const [dueAt, setDueAt] = useState(
+    prefillDate ? dateToLocalInput(prefillDate, 17) : defaultDateTime(24)
+  );
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -591,6 +595,17 @@ function defaultDateTime(offsetHours = 2) {
   const d = new Date();
   d.setMinutes(0, 0, 0);
   d.setHours(d.getHours() + offsetHours);
+  return fmtLocal(d);
+}
+
+// Pre-fill from a calendar Date at a given hour (e.g. 09:00 for scheduled, 17:00 for due).
+function dateToLocalInput(date, hour = 9) {
+  const d = new Date(date);
+  d.setHours(hour, 0, 0, 0);
+  return fmtLocal(d);
+}
+
+function fmtLocal(d) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

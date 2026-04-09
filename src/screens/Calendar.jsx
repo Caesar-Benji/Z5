@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listMissionsInRange } from "../data/missions";
+import { useAuth, canCreateInvites } from "../auth";
 import { Panel, PageHeader, Btn, Badge, Mono } from "../ui";
 import { useIsMobile } from "../useIsMobile";
 import { C, FONT_MONO, S } from "../theme";
@@ -14,8 +15,10 @@ import { supabase } from "../supabase";
 // missions.due_at (admin). Later, training sessions will plug in here
 // without a UI rewrite.
 
-export default function Calendar({ onOpenMission }) {
+export default function Calendar({ onOpenMission, onCreateForDate }) {
+  const { profile } = useAuth();
   const isMobile = useIsMobile();
+  const showCreate = canCreateInvites(profile?.role);
   const today = useMemo(() => startOfDay(new Date()), []);
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
   const [selectedDay, setSelectedDay] = useState(null); // Date | null
@@ -138,7 +141,14 @@ export default function Calendar({ onOpenMission }) {
       </div>
 
       {selectedDay && (
-        <Panel title={dayHeader(selectedDay)}>
+        <Panel
+          title={dayHeader(selectedDay)}
+          action={showCreate && onCreateForDate && (
+            <Btn small primary onClick={() => onCreateForDate(selectedDay)}>
+              + New
+            </Btn>
+          )}
+        >
           {(() => {
             const list = eventsByDay.get(dayKey(selectedDay)) || [];
             if (list.length === 0) {
