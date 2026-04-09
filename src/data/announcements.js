@@ -21,6 +21,13 @@ export async function postAnnouncement({ scope, squadId, title, body }) {
   return { error };
 }
 
+export async function updateAnnouncement(id, { title, body }) {
+  const { error } = await supabase.from("announcements")
+    .update({ title, body })
+    .eq("id", id);
+  return { error };
+}
+
 export async function deleteAnnouncement(id) {
   const { error } = await supabase.from("announcements").delete().eq("id", id);
   return { error };

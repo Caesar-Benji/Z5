@@ -147,22 +147,35 @@ const DEFAULT_SLOTS = [
   "NVG / thermal",
 ];
 
-function RifleIcon() {
+function RifleIcon({ size = 20 }) {
   return (
     <svg
-      width="16" height="16" viewBox="0 0 16 16" fill="none"
-      style={{ verticalAlign: "middle", marginRight: 8, opacity: 0.8 }}
+      width={size} height={size} viewBox="0 0 48 28" fill="currentColor"
+      style={{ verticalAlign: "middle", marginRight: 8, opacity: 0.85 }}
     >
-      {/* Barrel */}
-      <line x1="1" y1="5" x2="12" y2="5" stroke="currentColor" strokeWidth="1.2" />
-      {/* Receiver body */}
-      <rect x="6" y="3.5" width="6" height="3" rx="0.5" stroke="currentColor" strokeWidth="1" fill="none" />
-      {/* Scope */}
-      <rect x="3" y="2" width="5" height="2" rx="1" stroke="currentColor" strokeWidth="1" fill="none" />
+      {/* Barrel + suppressor */}
+      <rect x="0" y="10" width="20" height="2.5" rx="1" />
+      {/* Handguard */}
+      <rect x="12" y="8.5" width="10" height="5" rx="1" />
+      {/* Receiver */}
+      <rect x="22" y="7" width="10" height="7" rx="1.2" />
+      {/* Scope body */}
+      <rect x="16" y="3" width="14" height="4" rx="2" />
+      {/* Scope front lens */}
+      <circle cx="15" cy="5" r="2.2" />
+      {/* Scope rear lens */}
+      <circle cx="31" cy="5" r="1.8" />
+      {/* Scope mount */}
+      <rect x="22" y="5.5" width="2" height="2" />
+      <rect x="28" y="5.5" width="2" height="2" />
+      {/* Magazine */}
+      <rect x="26" y="14" width="4" height="7" rx="0.8" />
       {/* Trigger guard */}
-      <path d="M9 6.5 L9 9 Q9 10 10 10 L11 10" stroke="currentColor" strokeWidth="1" fill="none" />
+      <path d="M24 14 L24 18 Q24 20 26 20 L28 20" fill="none" stroke="currentColor" strokeWidth="1.4" />
       {/* Stock */}
-      <line x1="12" y1="5" x2="15" y2="7" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M32 8 L38 8 Q42 8 44 10 L48 14 L48 16 L44 16 L40 13 Q38 11.5 36 12 L32 14 Z" />
+      {/* Grip */}
+      <path d="M30 14 L31 14 L32 22 Q32 24 30 24 L29 24 Q28 24 28 22 L29 14 Z" />
     </svg>
   );
 }
