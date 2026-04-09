@@ -124,7 +124,7 @@ export const MISSION_STATUS_TONES = Object.fromEntries(
 // Kept in sync with missions.kind check constraint in schema_v4.sql.
 
 export const MISSION_KINDS = [
-  { key: "operational", label: "Operational", icon: "✦" },
+  { key: "operational", label: "Operational", icon: "⌖" },
   { key: "admin",       label: "Admin task",  icon: "◎" },
 ];
 

@@ -307,7 +307,7 @@ function DayCell({ date, inMonth, isToday, isSelected, events, onClick, isMobile
 
 function DayEventRow({ event, onOpen }) {
   const m = event.mission;
-  const icon = MISSION_KIND_ICONS[m.kind || "operational"] || "✦";
+  const icon = MISSION_KIND_ICONS[m.kind || "operational"] || "⌖";
   const statusTone  = MISSION_STATUS_TONES[m.status]  || "default";
   const statusLabel = MISSION_STATUS_LABELS[m.status] || m.status;
   const kindLabel   = MISSION_KIND_LABELS[m.kind || "operational"];

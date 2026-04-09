@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useAuth, roleLabel } from "../auth";
+import { useState, useMemo } from "react";
+import { useAuth, roleLabel, canManageSquads } from "../auth";
 import { Page, AppShell, NavItem, NavLabel, TabItem, Badge } from "../ui";
 import { useIsMobile } from "../useIsMobile";
 import { C, FONT_MONO } from "../theme";
@@ -12,20 +12,13 @@ import Missions from "./Missions";
 import MissionCreate from "./MissionCreate";
 import Checklist from "./Checklist";
 
-const NAV_MAIN = [
+// Mobile bottom bar — 4 items, clean and minimal.
+const MOBILE_TABS = [
   { key: "home",     label: "Home",     icon: "◉" },
   { key: "calendar", label: "Calendar", icon: "▤" },
-  { key: "missions", label: "Missions", icon: "✦" },
-  { key: "gear",     label: "Gear",     icon: "▣" },
-  { key: "roster",   label: "Roster",   icon: "▦" },
+  { key: "missions", label: "Missions", icon: "⌖" },
+  { key: "profile",  label: "Profile",  icon: "◍" },
 ];
-
-const NAV_ACCOUNT = [
-  { key: "profile", label: "Profile", icon: "◍" },
-];
-
-// Flat list used by the mobile bottom tab bar (max 5 items recommended).
-const MOBILE_TABS = [...NAV_MAIN, ...NAV_ACCOUNT];
 
 export default function Shell() {
   const { profile, signOut } = useAuth();
@@ -34,6 +27,8 @@ export default function Shell() {
   const [missionView, setMissionView] = useState("list");
   const [activeMissionId, setActiveMissionId] = useState(null);
   const isMobile = useIsMobile();
+
+  const isAdminOrOfficer = canManageSquads(profile?.role);
 
   function goTab(key) {
     setView(key);
@@ -77,18 +72,29 @@ export default function Shell() {
       </div>
 
       <NavLabel>Navigation</NavLabel>
-      {NAV_MAIN.map(n => (
-        <NavItem key={n.key} active={view === n.key} onClick={() => goTab(n.key)}>
-          {n.label}
-        </NavItem>
-      ))}
+      <NavItem active={view === "home"} onClick={() => goTab("home")}>
+        Home
+      </NavItem>
+      <NavItem active={view === "calendar"} onClick={() => goTab("calendar")}>
+        Calendar
+      </NavItem>
+      <NavItem active={view === "missions"} onClick={() => goTab("missions")}>
+        Missions
+      </NavItem>
+
+      {isAdminOrOfficer && (
+        <>
+          <NavLabel>Admin</NavLabel>
+          <NavItem active={view === "roster"} onClick={() => goTab("roster")}>
+            Roster
+          </NavItem>
+        </>
+      )}
 
       <NavLabel>Account</NavLabel>
-      {NAV_ACCOUNT.map(n => (
-        <NavItem key={n.key} active={view === n.key} onClick={() => goTab(n.key)}>
-          {n.label}
-        </NavItem>
-      ))}
+      <NavItem active={view === "profile"} onClick={() => goTab("profile")}>
+        Profile
+      </NavItem>
       <NavItem onClick={signOut}>Log out</NavItem>
 
       <div style={{ flex: 1 }} />
@@ -247,6 +253,12 @@ export default function Shell() {
     );
   }
 
+  function openMission(id) {
+    setActiveMissionId(id);
+    setMissionView("detail");
+    setView("missions");
+  }
+
   return (
     <Page>
       <AppShell
@@ -254,29 +266,18 @@ export default function Shell() {
         mobileTopBar={isMobile ? mobileTopBar : null}
         mobileTabBar={isMobile ? mobileTabBar : null}
       >
-        {view === "home"     && (
+        {view === "home" && (
           <Home
-            onOpenMission={(id) => {
-              setActiveMissionId(id);
-              setMissionView("detail");
-              setView("missions");
-            }}
+            onOpenMission={openMission}
             onGoMissions={() => { setMissionView("list"); setView("missions"); }}
           />
         )}
         {view === "calendar" && (
-          <Calendar
-            onOpenMission={(id) => {
-              setActiveMissionId(id);
-              setMissionView("detail");
-              setView("missions");
-            }}
-          />
+          <Calendar onOpenMission={openMission} />
         )}
         {view === "missions" && renderMissions()}
-        {view === "gear"     && <Gear />}
-        {view === "roster"   && <Roster />}
-        {view === "profile"  && <Profile />}
+        {view === "profile" && <Profile />}
+        {view === "roster" && isAdminOrOfficer && <Roster />}
       </AppShell>
     </Page>
   );

@@ -9,6 +9,7 @@ import {
   MISSION_STATUS_LABELS, MISSION_STATUS_TONES,
   MISSION_KINDS, MISSION_KIND_ICONS,
 } from "../missionTemplate";
+import AnnouncementComposer from "./AnnouncementComposer";
 
 // Squad leader, officer and admin can author missions.
 function canCreateMissions(role) {
@@ -54,13 +55,15 @@ export default function Missions({ onOpenMission, onCreateMission }) {
     <>
       <PageHeader
         title="Missions"
-        subtitle="Scheduled operations and checklists."
+        subtitle="Operations, tasks and announcements."
         action={showCreate && (
           <Btn primary onClick={onCreateMission} fullWidth={isMobile}>
             + New mission
           </Btn>
         )}
       />
+
+      <AnnouncementComposer />
 
       <Panel>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
@@ -105,7 +108,7 @@ function MissionRow({ mission, squadName, onOpen }) {
   const tone = MISSION_STATUS_TONES[mission.status] || "default";
   const label = MISSION_STATUS_LABELS[mission.status] || mission.status;
   const kind = mission.kind || "operational";
-  const icon = MISSION_KIND_ICONS[kind] || "✦";
+  const icon = MISSION_KIND_ICONS[kind] || "⌖";
   const when = kind === "admin"
     ? `DUE ${formatWhen(mission.due_at)}`
     : formatWhen(mission.scheduled_at);

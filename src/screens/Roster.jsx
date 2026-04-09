@@ -4,7 +4,7 @@ import { supabase } from "../supabase";
 import { Panel, PageHeader, Btn, Input, Field, ErrLine, OkLine, Badge, Mono } from "../ui";
 import { useIsMobile } from "../useIsMobile";
 import { C, S } from "../theme";
-import AnnouncementComposer from "./AnnouncementComposer";
+// AnnouncementComposer moved to Missions screen for broader access.
 
 // Squad lifecycle status
 const SQUAD_STATUS_LABELS = {
@@ -88,8 +88,6 @@ export default function Roster() {
         title="Roster"
         subtitle="Squads, members and invite codes."
       />
-
-      <AnnouncementComposer />
 
       {showCreateSquad && (
         <CreateSquadPanel onCreated={(msg) => { setOk(msg); load(); }} setErr={setErr} />

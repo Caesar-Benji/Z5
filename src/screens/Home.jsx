@@ -225,7 +225,7 @@ function MissionCardRow({ mission, pct, checked, total, onClick }) {
   const statusTone = MISSION_STATUS_TONES[mission.status] || "default";
   const statusLabel = MISSION_STATUS_LABELS[mission.status] || mission.status;
   const kind = mission.kind || "operational";
-  const icon = MISSION_KIND_ICONS[kind] || "✦";
+  const icon = MISSION_KIND_ICONS[kind] || "⌖";
   const whenTs = kind === "admin" ? mission.due_at : mission.scheduled_at;
   const whenPrefix = kind === "admin" ? "DUE " : "";
   return (

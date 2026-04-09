@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useAuth, roleLabel } from "../auth";
+import { useAuth, roleLabel, canManageSquads } from "../auth";
 import { supabase } from "../supabase";
 import { Panel, PageHeader, Field, Btn, Input, ErrLine, OkLine } from "../ui";
 import { useIsMobile } from "../useIsMobile";
 import { C } from "../theme";
+import Gear from "./Gear";
 
 export default function Profile() {
-  const { profile, refreshProfile } = useAuth();
+  const { profile, refreshProfile, signOut } = useAuth();
   const isMobile = useIsMobile();
   const [callsign, setCallsign] = useState(profile?.callsign || "");
   const [name, setName] = useState(profile?.full_name || "");
@@ -51,7 +52,7 @@ export default function Profile() {
     <>
       <PageHeader
         title="Profile"
-        subtitle="Your identity and password."
+        subtitle="Your identity, gear and settings."
       />
 
       <div style={{
@@ -96,6 +97,16 @@ export default function Profile() {
           </div>
         </Panel>
       </div>
+
+      {/* Personal gear — was its own tab, now lives under Profile */}
+      <Gear />
+
+      {/* Mobile sign out — desktop has it in sidebar */}
+      {isMobile && (
+        <div style={{ marginTop: 24 }}>
+          <Btn fullWidth onClick={signOut}>Log out</Btn>
+        </div>
+      )}
     </>
   );
 }
