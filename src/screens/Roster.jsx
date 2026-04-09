@@ -173,6 +173,7 @@ function SquadBlock({ squad, members, canManage, onChangeStatus }) {
       }}>
         {squad.name}
         {statusLabel && <Badge tone={statusTone}>{statusLabel}</Badge>}
+        {squad.is_bootcamp && <Badge tone="warn">BOOT CAMP</Badge>}
         <Badge>{members.length} {members.length === 1 ? "member" : "members"}</Badge>
         {actions.length > 0 && (
           <div style={{
@@ -266,6 +267,7 @@ function SquadBlock({ squad, members, canManage, onChangeStatus }) {
 function CreateSquadPanel({ onCreated, setErr }) {
   const [name, setName] = useState("");
   const [status, setStatus] = useState("active");
+  const [isBootcamp, setIsBootcamp] = useState(false);
   const [busy, setBusy] = useState(false);
   const isMobile = useIsMobile();
 
@@ -275,11 +277,14 @@ function CreateSquadPanel({ onCreated, setErr }) {
     try {
       const nm = name.trim().toUpperCase();
       if (!nm) throw new Error("Squad name required");
-      const { error } = await supabase.from("squads").insert({ name: nm, status });
+      const { error } = await supabase.from("squads").insert({
+        name: nm, status, is_bootcamp: isBootcamp,
+      });
       if (error) throw error;
       setName("");
       setStatus("active");
-      onCreated(`Squad "${nm}" registered (${SQUAD_STATUS_LABELS[status]}).`);
+      setIsBootcamp(false);
+      onCreated(`Squad "${nm}" registered (${SQUAD_STATUS_LABELS[status]}${isBootcamp ? " · BOOT CAMP" : ""}).`);
     } catch (e) {
       setErr(String(e.message || e));
     } finally { setBusy(false); }
@@ -312,6 +317,25 @@ function CreateSquadPanel({ onCreated, setErr }) {
             <option value="training">In training</option>
             <option value="archived">Archived</option>
           </select>
+        </Field>
+        <Field label="Boot camp squad">
+          <label style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            cursor: "pointer",
+            color: C.text,
+            fontSize: 14,
+            minHeight: isMobile ? 46 : 36,
+          }}>
+            <input
+              type="checkbox"
+              checked={isBootcamp}
+              onChange={(e) => setIsBootcamp(e.target.checked)}
+              style={{ width: 18, height: 18, accentColor: C.warn }}
+            />
+            <span>Restricted visibility</span>
+          </label>
         </Field>
         <Btn primary type="submit" disabled={busy} fullWidth={isMobile}>
           {busy ? "Registering…" : "Register squad"}

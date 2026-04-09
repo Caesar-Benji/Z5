@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth, roleLabel, canManageSquads } from "../auth";
+import { supabase } from "../supabase";
 import { Page, AppShell, NavItem, NavLabel, TabItem, Badge } from "../ui";
 import { useIsMobile } from "../useIsMobile";
 import { C, FONT_MONO } from "../theme";
@@ -11,25 +12,35 @@ import Roster from "./Roster";
 import Missions from "./Missions";
 import MissionCreate from "./MissionCreate";
 import Checklist from "./Checklist";
-
-// Mobile bottom bar — 4 items, clean and minimal.
-const MOBILE_TABS = [
-  { key: "home",     label: "Home",     icon: "◉" },
-  { key: "calendar", label: "Calendar", icon: "▤" },
-  { key: "missions", label: "Missions", icon: "⌖" },
-  { key: "profile",  label: "Profile",  icon: "◍" },
-];
+import Knowledge from "./Knowledge";
 
 export default function Shell() {
   const { profile, signOut } = useAuth();
   const [view, setView] = useState("home");
-  // Sub-view state within the Missions tab: "list" | "create" | "detail".
   const [missionView, setMissionView] = useState("list");
   const [activeMissionId, setActiveMissionId] = useState(null);
-  const [prefillDate, setPrefillDate] = useState(null); // Date passed from Calendar → MissionCreate
+  const [prefillDate, setPrefillDate] = useState(null);
+  const [mySquad, setMySquad] = useState(null);
   const isMobile = useIsMobile();
 
   const isAdminOrOfficer = canManageSquads(profile?.role);
+  const isBootcamp = mySquad?.is_bootcamp === true;
+
+  // Fetch the user's squad to check bootcamp status
+  useEffect(() => {
+    if (!profile?.squad_id) { setMySquad(null); return; }
+    supabase.from("squads").select("*").eq("id", profile.squad_id).maybeSingle()
+      .then(({ data }) => setMySquad(data));
+  }, [profile?.squad_id]);
+
+  // Mobile bottom bar — 5 items for everyone
+  const mobileTabs = useMemo(() => [
+    { key: "home",      label: "Home",      icon: "◉" },
+    { key: "calendar",  label: "Calendar",  icon: "▤" },
+    { key: "missions",  label: "Missions",  icon: "⌖" },
+    { key: "knowledge", label: "Knowledge", icon: "📖" },
+    { key: "profile",   label: "Profile",   icon: "◍" },
+  ], []);
 
   function goTab(key) {
     setView(key);
@@ -82,6 +93,9 @@ export default function Shell() {
       <NavItem active={view === "missions"} onClick={() => goTab("missions")}>
         Missions
       </NavItem>
+      <NavItem active={view === "knowledge"} onClick={() => goTab("knowledge")}>
+        Knowledge
+      </NavItem>
 
       {isAdminOrOfficer && (
         <>
@@ -120,6 +134,7 @@ export default function Shell() {
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           <Badge tone="bright">{roleLabel(profile?.role)}</Badge>
+          {isBootcamp && <Badge tone="warn">BOOT CAMP</Badge>}
           {!profile?.squad_id && <Badge tone="warn">No Squad</Badge>}
         </div>
       </div>
@@ -181,6 +196,12 @@ export default function Shell() {
           </span>
           <span style={{ color: C.dimmer }}>·</span>
           <span>{roleLabel(profile?.role)}</span>
+          {isBootcamp && (
+            <>
+              <span style={{ color: C.dimmer }}>·</span>
+              <span style={{ color: C.warn }}>BOOT CAMP</span>
+            </>
+          )}
         </div>
       </div>
       <button
@@ -209,7 +230,7 @@ export default function Shell() {
   // ------- Mobile bottom tab bar -------
   const mobileTabBar = (
     <>
-      {MOBILE_TABS.map(t => (
+      {mobileTabs.map(t => (
         <TabItem
           key={t.key}
           active={view === t.key}
@@ -250,6 +271,8 @@ export default function Shell() {
     }
     return (
       <Missions
+        isBootcamp={isBootcamp}
+        squadId={profile?.squad_id}
         onOpenMission={(id) => { setActiveMissionId(id); setMissionView("detail"); }}
         onCreateMission={() => setMissionView("create")}
       />
@@ -271,6 +294,8 @@ export default function Shell() {
       >
         {view === "home" && (
           <Home
+            isBootcamp={isBootcamp}
+            squadId={profile?.squad_id}
             onOpenMission={openMission}
             onGoMissions={() => { setMissionView("list"); setView("missions"); }}
           />
@@ -286,6 +311,7 @@ export default function Shell() {
           />
         )}
         {view === "missions" && renderMissions()}
+        {view === "knowledge" && <Knowledge />}
         {view === "profile" && <Profile />}
         {view === "roster" && isAdminOrOfficer && <Roster />}
       </AppShell>

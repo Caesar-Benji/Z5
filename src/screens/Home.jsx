@@ -14,7 +14,7 @@ import {
   MISSION_KIND_ICONS,
 } from "../missionTemplate";
 
-export default function Home({ onOpenMission, onGoMissions }) {
+export default function Home({ onOpenMission, onGoMissions, isBootcamp, squadId }) {
   const { profile } = useAuth();
   const greeting = greet();
   const isMobile = useIsMobile();
@@ -50,19 +50,27 @@ export default function Home({ onOpenMission, onGoMissions }) {
     setMissionProgress(progress);
 
     const { data: ann } = await listRecentAnnouncements({ limit: 5 });
-    setAnnouncements(ann || []);
+    const filteredAnn = isBootcamp && squadId
+      ? (ann || []).filter((a) => a.scope === "squad" && a.squad_id === squadId)
+      : (ann || []);
+    setAnnouncements(filteredAnn);
 
     setLoading(false);
-  }, [profile?.id]);
+  }, [profile?.id, isBootcamp, squadId]);
 
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     const unsub = subscribeAnnouncements(() => {
-      listRecentAnnouncements({ limit: 5 }).then(({ data }) => setAnnouncements(data || []));
+      listRecentAnnouncements({ limit: 5 }).then(({ data }) => {
+        const filtered = isBootcamp && squadId
+          ? (data || []).filter((a) => a.scope === "squad" && a.squad_id === squadId)
+          : (data || []);
+        setAnnouncements(filtered);
+      });
     });
     return () => { unsub && unsub(); };
-  }, []);
+  }, [isBootcamp, squadId]);
 
   const hasMissions      = missions.length > 0;
   const hasAnnouncements = announcements.length > 0;

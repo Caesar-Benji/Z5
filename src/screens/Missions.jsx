@@ -19,7 +19,7 @@ function canCreateMissions(role) {
   return canCreateInvites(role);
 }
 
-export default function Missions({ onOpenMission, onCreateMission }) {
+export default function Missions({ onOpenMission, onCreateMission, isBootcamp, squadId }) {
   const { profile } = useAuth();
   const isMobile = useIsMobile();
   const [missions, setMissions] = useState([]);
@@ -31,17 +31,25 @@ export default function Missions({ onOpenMission, onCreateMission }) {
 
   const load = useCallback(async () => {
     setLoading(true); setErr("");
+    // Boot camp squads only see their own squad's missions
+    const missionOpts = isBootcamp && squadId
+      ? { squadId, limit: 100 }
+      : { limit: 100 };
     const [{ data, error }, { data: sq }, { data: ann }] = await Promise.all([
-      listMissions({ limit: 100 }),
+      listMissions(missionOpts),
       supabase.from("squads").select("*").order("name"),
       listRecentAnnouncements({ limit: 20 }),
     ]);
     if (error) setErr(String(error.message || error));
     setMissions(data);
     setSquads(sq || []);
-    setAnnouncements(ann || []);
+    // Boot camp squads only see announcements scoped to their squad
+    const filteredAnn = isBootcamp && squadId
+      ? (ann || []).filter((a) => a.scope === "squad" && a.squad_id === squadId)
+      : (ann || []);
+    setAnnouncements(filteredAnn);
     setLoading(false);
-  }, []);
+  }, [isBootcamp, squadId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -56,10 +64,15 @@ export default function Missions({ onOpenMission, onCreateMission }) {
 
   useEffect(() => {
     const unsub = subscribeAnnouncements(() => {
-      listRecentAnnouncements({ limit: 20 }).then(({ data }) => setAnnouncements(data || []));
+      listRecentAnnouncements({ limit: 20 }).then(({ data }) => {
+        const filtered = isBootcamp && squadId
+          ? (data || []).filter((a) => a.scope === "squad" && a.squad_id === squadId)
+          : (data || []);
+        setAnnouncements(filtered);
+      });
     });
     return unsub;
-  }, []);
+  }, [isBootcamp, squadId]);
 
   const squadName = (id) => squads.find((s) => s.id === id)?.name || "—";
   const showCreate = canCreateMissions(profile?.role);
