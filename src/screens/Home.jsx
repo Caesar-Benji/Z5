@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth, roleLabel } from "../auth";
+import { useAuth, roleLabelT } from "../auth";
+import { useI18n } from "../i18n";
 import { Panel, PageHeader, Badge, Btn } from "../ui";
 import { useIsMobile } from "../useIsMobile";
 import { C, FONT_MONO } from "../theme";
@@ -16,7 +17,8 @@ import {
 
 export default function Home({ onOpenMission, onGoMissions, isBootcamp, squadId }) {
   const { profile } = useAuth();
-  const greeting = greet();
+  const { t } = useI18n();
+  const greeting = greet(t);
   const isMobile = useIsMobile();
 
   const [missions, setMissions] = useState([]);
@@ -80,21 +82,21 @@ export default function Home({ onOpenMission, onGoMissions, isBootcamp, squadId 
     <>
       <PageHeader
         title={`${greeting}, ${profile?.callsign || "Operator"}`}
-        subtitle={`Role: ${roleLabel(profile?.role)}${profile?.squad_id ? "" : " · no squad assigned"}`}
+        subtitle={`${t("prof.role")}: ${roleLabelT(profile?.role, t)}${profile?.squad_id ? "" : " · " + t("home.nosquad")}`}
       />
 
       {isEmpty && (
         <Panel>
           <div style={{ color: C.dim, fontSize: 14, lineHeight: 1.6, padding: "12px 0" }}>
-            No missions or announcements at this time. Stand by.
+            {t("home.empty")}
           </div>
         </Panel>
       )}
 
       {hasMissions && (
         <Panel
-          title="⌖  Upcoming missions"
-          action={<Btn small onClick={onGoMissions}>View all</Btn>}
+          title={t("home.upcoming")}
+          action={<Btn small onClick={onGoMissions}>{t("home.viewall")}</Btn>}
         >
           {missions.map((m) => {
             const p = missionProgress[m.id] || { checked: 0, total: 0 };
@@ -114,7 +116,7 @@ export default function Home({ onOpenMission, onGoMissions, isBootcamp, squadId 
       )}
 
       {hasAnnouncements && (
-        <Panel title="◈  Announcements">
+        <Panel title={t("home.announcements")}>
           {announcements.map((a) => (
             <AnnouncementRow key={a.id} a={a} />
           ))}
@@ -123,7 +125,7 @@ export default function Home({ onOpenMission, onGoMissions, isBootcamp, squadId 
 
       {loading && !hasMissions && !hasAnnouncements && (
         <Panel>
-          <div style={{ color: C.dim, fontSize: 13 }}>Loading…</div>
+          <div style={{ color: C.dim, fontSize: 13 }}>{t("home.loading")}</div>
         </Panel>
       )}
     </>
@@ -278,10 +280,10 @@ function formatWhen(ts) {
   }).toUpperCase();
 }
 
-function greet() {
+function greet(t) {
   const h = new Date().getHours();
-  if (h < 5)  return "Late watch";
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+  if (h < 5)  return t("home.late");
+  if (h < 12) return t("home.morning");
+  if (h < 18) return t("home.afternoon");
+  return t("home.evening");
 }

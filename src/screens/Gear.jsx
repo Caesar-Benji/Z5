@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../auth";
+import { useI18n } from "../i18n";
 import { supabase } from "../supabase";
 import { Panel, PageHeader, Btn, Input, ErrLine } from "../ui";
 import { useIsMobile } from "../useIsMobile";
@@ -182,6 +183,7 @@ function RifleIcon({ size = 20 }) {
 
 export default function Gear() {
   const { session } = useAuth();
+  const { t } = useI18n();
   const userId = session?.user?.id;
   const [rows, setRows] = useState([]);
   const [err, setErr] = useState("");
@@ -233,12 +235,12 @@ export default function Gear() {
   return (
     <>
       <PageHeader
-        title={<><RifleIcon /> Personal gear inventory</>}
-        subtitle="Register every piece of gear with model and serial number."
-        action={<Btn onClick={addRow} fullWidth={isMobile}>+ Add row</Btn>}
+        title={<><RifleIcon /> {t("gear.title")}</>}
+        subtitle={t("gear.subtitle")}
+        action={<Btn onClick={addRow} fullWidth={isMobile}>{t("gear.add")}</Btn>}
       />
       <Panel>
-        {loading && <div style={{ color: C.dim }}>Loading…</div>}
+        {loading && <div style={{ color: C.dim }}>{t("gear.loading")}</div>}
         <ErrLine>{err}</ErrLine>
 
         {isMobile ? (

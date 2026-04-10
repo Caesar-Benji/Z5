@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { useAuth } from "../auth";
+import { useI18n } from "../i18n";
 import { Panel, PageHeader, Btn, Input, Textarea, Field, ErrLine, OkLine, Badge } from "../ui";
 import { useIsMobile } from "../useIsMobile";
 import { C, FONT_MONO, S } from "../theme";
@@ -27,12 +28,14 @@ const SUBJECT_ICONS = {
 
 export default function Knowledge({ isBootcamp }) {
   const { profile } = useAuth();
+  const { t } = useI18n();
   const isMobile = useIsMobile();
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [viewingUrl, setViewingUrl] = useState(null);
   const [viewingTitle, setViewingTitle] = useState("");
+  const [viewingFileName, setViewingFileName] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,35 +57,64 @@ export default function Knowledge({ isBootcamp }) {
   function openViewer(m) {
     setViewingUrl(getMaterialUrl(m.file_path));
     setViewingTitle(m.title || m.file_name);
+    setViewingFileName(m.file_name || "");
   }
 
-  // ── PDF Viewer ──
+  // ── Document Viewer ──
   if (viewingUrl) {
+    // Detect file type — use Google Docs Viewer for non-PDF files
+    const ext = (viewingFileName.split(".").pop() || "").toLowerCase();
+    const isPdf = ext === "pdf";
+    const isImage = ["png", "jpg", "jpeg", "gif", "webp"].includes(ext);
+    // Google Docs Viewer handles pptx, docx, xlsx etc.
+    const embedUrl = isPdf || isImage
+      ? viewingUrl
+      : `https://docs.google.com/gview?url=${encodeURIComponent(viewingUrl)}&embedded=true`;
+
     return (
       <>
         <PageHeader title={<><span style={{ marginRight: 8 }}>📖</span>{viewingTitle}</>} />
         <Panel>
+          {!isPdf && !isImage && (
+            <div style={{ color: C.dim, fontSize: 12, marginBottom: 8, fontFamily: FONT_MONO }}>
+              {t("kn.google_note")}
+            </div>
+          )}
           <div style={{
             width: "100%",
-            height: isMobile ? "calc(100vh - 200px)" : "calc(100vh - 180px)",
+            height: isMobile ? "calc(100vh - 220px)" : "calc(100vh - 200px)",
             border: `1px solid ${C.border}`,
             borderRadius: 4,
             overflow: "hidden",
             background: "#111",
           }}>
-            <iframe
-              src={viewingUrl}
-              title={viewingTitle}
-              style={{ width: "100%", height: "100%", border: "none" }}
-            />
+            {isImage ? (
+              <img
+                src={viewingUrl}
+                alt={viewingTitle}
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              />
+            ) : (
+              <iframe
+                src={embedUrl}
+                title={viewingTitle}
+                style={{ width: "100%", height: "100%", border: "none" }}
+                allow="autoplay"
+              />
+            )}
           </div>
           <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-            <Btn onClick={() => { setViewingUrl(null); setViewingTitle(""); }}>
-              ← Back to materials
+            <Btn onClick={() => { setViewingUrl(null); setViewingTitle(""); setViewingFileName(""); }}>
+              {t("kn.back")}
             </Btn>
             <Btn small onClick={() => window.open(viewingUrl, "_blank")}>
-              Open in new tab
+              {t("kn.download")}
             </Btn>
+            {!isPdf && !isImage && (
+              <Btn small onClick={() => window.open(embedUrl, "_blank")}>
+                {t("kn.google_viewer")}
+              </Btn>
+            )}
           </div>
         </Panel>
       </>
@@ -92,14 +124,14 @@ export default function Knowledge({ isBootcamp }) {
   return (
     <>
       <PageHeader
-        title={<><span style={{ marginRight: 8 }}>📖</span>Knowledge base</>}
-        subtitle={isBootcamp ? "Boot camp course materials — 4 week program." : "Course materials, presentations and references."}
+        title={<><span style={{ marginRight: 8 }}>📖</span>{t("kn.title")}</>}
+        subtitle={isBootcamp ? t("kn.sub_bootcamp") : t("kn.sub_normal")}
       />
 
       {showUpload && <UploadPanel onUploaded={load} />}
 
       {loading && (
-        <Panel><div style={{ color: C.dim, fontSize: 13 }}>Loading…</div></Panel>
+        <Panel><div style={{ color: C.dim, fontSize: 13 }}>{t("kn.loading")}</div></Panel>
       )}
       {err && (
         <Panel><div style={{ color: C.error, fontSize: 13 }}>{err}</div></Panel>
@@ -108,7 +140,7 @@ export default function Knowledge({ isBootcamp }) {
       {!loading && materials.length === 0 && (
         <Panel>
           <div style={{ color: C.dim, fontSize: 13, padding: "4px 0" }}>
-            No materials uploaded yet.
+            {t("kn.empty")}
           </div>
         </Panel>
       )}
@@ -126,6 +158,7 @@ export default function Knowledge({ isBootcamp }) {
    SUBJECT VIEW — regular users: grouped by subject
    ═══════════════════════════════════════════════ */
 function SubjectView({ materials, profile, onView, onDeleted }) {
+  const { t } = useI18n();
   const canDel = canUpload(profile?.role);
 
   // Group materials by category, preserving SUBJECTS order
@@ -139,15 +172,15 @@ function SubjectView({ materials, profile, onView, onDeleted }) {
     // Order by SUBJECTS list, then any remaining categories
     const ordered = [];
     for (const s of SUBJECTS) {
-      if (map[s.key]) ordered.push({ key: s.key, label: s.label, items: map[s.key] });
+      if (map[s.key]) ordered.push({ key: s.key, label: t(`subj.${s.key}`) || s.label, items: map[s.key] });
     }
     for (const key of Object.keys(map)) {
       if (!SUBJECTS.find((s) => s.key === key)) {
-        ordered.push({ key, label: key.toUpperCase(), items: map[key] });
+        ordered.push({ key, label: t(`subj.${key}`) || key.toUpperCase(), items: map[key] });
       }
     }
     return ordered;
-  }, [materials]);
+  }, [materials, t]);
 
   return (
     <>
@@ -178,6 +211,7 @@ function SubjectView({ materials, profile, onView, onDeleted }) {
    with subjects within each week
    ═══════════════════════════════════════════════ */
 function WeeklyView({ materials, profile, onView, onDeleted }) {
+  const { t } = useI18n();
   const canDel = canUpload(profile?.role);
 
   const weekGroups = useMemo(() => {
@@ -193,11 +227,11 @@ function WeeklyView({ materials, profile, onView, onDeleted }) {
       }
       const subjects = [];
       for (const s of SUBJECTS) {
-        if (subjectMap[s.key]) subjects.push({ key: s.key, label: s.label, items: subjectMap[s.key] });
+        if (subjectMap[s.key]) subjects.push({ key: s.key, label: t(`subj.${s.key}`) || s.label, items: subjectMap[s.key] });
       }
       for (const key of Object.keys(subjectMap)) {
         if (!SUBJECTS.find((s) => s.key === key)) {
-          subjects.push({ key, label: key.toUpperCase(), items: subjectMap[key] });
+          subjects.push({ key, label: t(`subj.${key}`) || key.toUpperCase(), items: subjectMap[key] });
         }
       }
       result.push({ week: w, subjects, total: weekMats.length });
@@ -212,12 +246,12 @@ function WeeklyView({ materials, profile, onView, onDeleted }) {
       {weekGroups.weeks.map((wg) => (
         <Panel
           key={wg.week}
-          title={`WEEK ${wg.week}`}
-          action={<Badge>{wg.total} {wg.total === 1 ? "material" : "materials"}</Badge>}
+          title={t("kn.week", { n: wg.week })}
+          action={<Badge>{wg.total} {wg.total === 1 ? t("kn.material") : t("kn.materials")}</Badge>}
         >
           {wg.total === 0 && (
             <div style={{ color: C.dim, fontSize: 13, padding: "4px 0" }}>
-              No materials assigned to this week yet.
+              {t("kn.week_empty")}
             </div>
           )}
           {wg.subjects.map((sg) => (
@@ -254,7 +288,7 @@ function WeeklyView({ materials, profile, onView, onDeleted }) {
 
       {weekGroups.unassigned.length > 0 && (
         <Panel
-          title="GENERAL MATERIALS"
+          title={t("kn.general")}
           action={<Badge>{weekGroups.unassigned.length}</Badge>}
         >
           {weekGroups.unassigned.map((m) => (
@@ -277,6 +311,7 @@ function WeeklyView({ materials, profile, onView, onDeleted }) {
    UPLOAD PANEL
    ═══════════════════════════════════════════════ */
 function UploadPanel({ onUploaded }) {
+  const { t } = useI18n();
   const isMobile = useIsMobile();
   const fileRef = useRef(null);
   const [title, setTitle] = useState("");
@@ -290,8 +325,8 @@ function UploadPanel({ onUploaded }) {
 
   async function handleUpload(e) {
     e.preventDefault();
-    if (!file) { setErr("Select a file."); return; }
-    if (!title.trim()) { setErr("Title is required."); return; }
+    if (!file) { setErr(t("kn.no_file")); return; }
+    if (!title.trim()) { setErr(t("kn.no_title")); return; }
     setBusy(true); setErr(""); setOk("");
     const { error } = await uploadMaterial({
       file,
@@ -309,7 +344,7 @@ function UploadPanel({ onUploaded }) {
   }
 
   return (
-    <Panel title="Upload material">
+    <Panel title={t("kn.upload_title")}>
       <form onSubmit={handleUpload}>
         <div style={{
           display: "flex",
@@ -318,11 +353,11 @@ function UploadPanel({ onUploaded }) {
           flexDirection: isMobile ? "column" : "row",
           alignItems: isMobile ? "stretch" : "flex-end",
         }}>
-          <Field label="Title">
+          <Field label={t("kn.title_label")}>
             <Input value={title} onChange={(e) => setTitle(e.target.value)}
-                   placeholder="Lesson title" style={{ width: isMobile ? "100%" : 220 }} />
+                   placeholder={t("kn.title_ph")} style={{ width: isMobile ? "100%" : 220 }} />
           </Field>
-          <Field label="Subject">
+          <Field label={t("kn.subject")}>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
@@ -335,12 +370,12 @@ function UploadPanel({ onUploaded }) {
             >
               {SUBJECTS.map((s) => (
                 <option key={s.key} value={s.key}>
-                  {SUBJECT_ICONS[s.key] || ""} {s.label}
+                  {SUBJECT_ICONS[s.key] || ""} {t(`subj.${s.key}`) || s.label}
                 </option>
               ))}
             </select>
           </Field>
-          <Field label="Boot camp week (optional)">
+          <Field label={t("kn.week_label")}>
             <select
               value={week}
               onChange={(e) => setWeek(e.target.value)}
@@ -351,21 +386,21 @@ function UploadPanel({ onUploaded }) {
                 minHeight: isMobile ? 46 : undefined,
               }}
             >
-              <option value="">— None —</option>
+              <option value="">{t("kn.week_none")}</option>
               {WEEKS.map((w) => (
-                <option key={w} value={w}>Week {w}</option>
+                <option key={w} value={w}>{t("kn.week_n", { n: w })}</option>
               ))}
             </select>
           </Field>
         </div>
 
-        <Field label="Description (optional)">
+        <Field label={t("kn.desc")}>
           <Textarea value={desc} onChange={(e) => setDesc(e.target.value)}
-                    placeholder="Brief summary of the material"
+                    placeholder={t("kn.desc_ph")}
                     rows={2} />
         </Field>
 
-        <Field label="File (PDF recommended)">
+        <Field label={t("kn.file")}>
           <input
             ref={fileRef}
             type="file"
@@ -387,7 +422,7 @@ function UploadPanel({ onUploaded }) {
 
         <div style={{ marginTop: 8 }}>
           <Btn primary disabled={busy} fullWidth={isMobile}>
-            {busy ? "Uploading…" : "Upload"}
+            {busy ? t("kn.uploading") : t("kn.upload")}
           </Btn>
         </div>
 
@@ -402,6 +437,7 @@ function UploadPanel({ onUploaded }) {
    MATERIAL ROW
    ═══════════════════════════════════════════════ */
 function MaterialRow({ material, canDelete, showWeek, onView, onDeleted }) {
+  const { t } = useI18n();
   const [confirmDel, setConfirmDel] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -419,7 +455,7 @@ function MaterialRow({ material, canDelete, showWeek, onView, onDeleted }) {
     ? `${(material.file_size / (1024 * 1024)).toFixed(1)} MB`
     : `${(material.file_size / 1024).toFixed(0)} KB`;
 
-  const subjectLabel = SUBJECT_MAP[material.category] || material.category;
+  const subjectLabel = t(`subj.${material.category}`) || SUBJECT_MAP[material.category] || material.category;
 
   return (
     <div style={{
@@ -463,13 +499,13 @@ function MaterialRow({ material, canDelete, showWeek, onView, onDeleted }) {
             alignItems: "center",
           }}>
             <Badge>{subjectLabel.toUpperCase()}</Badge>
-            {showWeek && material.week && <Badge tone="warn">WEEK {material.week}</Badge>}
+            {showWeek && material.week && <Badge tone="warn">{t("kn.week", { n: material.week })}</Badge>}
             <span>{sizeLabel}</span>
             <span>{new Date(material.created_at).toLocaleDateString()}</span>
           </div>
         </div>
         <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "flex-start" }}>
-          <Btn small onClick={onView}>View</Btn>
+          <Btn small onClick={onView}>{t("kn.view")}</Btn>
           {canDelete && (
             <>
               <Btn
@@ -478,7 +514,7 @@ function MaterialRow({ material, canDelete, showWeek, onView, onDeleted }) {
                 style={confirmDel ? { color: C.error, borderColor: C.error } : {}}
                 disabled={busy}
               >
-                {busy ? "…" : confirmDel ? "Confirm" : "Delete"}
+                {busy ? "…" : confirmDel ? t("kn.confirm") : t("kn.delete")}
               </Btn>
               {confirmDel && !busy && (
                 <Btn small onClick={() => setConfirmDel(false)}>Cancel</Btn>

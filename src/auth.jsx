@@ -118,6 +118,8 @@ export function useAuth() {
   return ctx;
 }
 
+// Base role labels (English). Screens should use t(`role.${role}`) for translated labels.
+// This function is kept for backward compatibility in places that don't have i18n context.
 export function roleLabel(role) {
   switch (role) {
     case "admin":        return "ADMIN";
@@ -127,6 +129,15 @@ export function roleLabel(role) {
     case "sniper":       return "SNIPER";
     default:             return (role || "").toUpperCase();
   }
+}
+
+// Translated role label — use in components that have i18n context
+export function roleLabelT(role, t) {
+  if (t && role) {
+    const translated = t(`role.${role}`);
+    if (translated !== `role.${role}`) return translated;
+  }
+  return roleLabel(role);
 }
 
 export function isInstructor(role) {
