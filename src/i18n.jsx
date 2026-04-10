@@ -6,7 +6,7 @@ const I18nCtx = createContext(null);
 const STORAGE_KEY = "z5_lang";
 
 function getInitialLang() {
-  try { return localStorage.getItem(STORAGE_KEY) || "he"; } catch { return "he"; }
+  try { return localStorage.getItem(STORAGE_KEY) || "en"; } catch { return "en"; }
 }
 
 export function I18nProvider({ children }) {

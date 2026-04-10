@@ -7,7 +7,7 @@ import { C } from "./theme";
 
 function Inner() {
   const { session, profile, profileError, loading, refreshProfile, signOut } = useAuth();
-  const { t, dir } = useI18n();
+  const { t } = useI18n();
 
   if (loading) {
     return (
@@ -49,20 +49,11 @@ function Inner() {
   return <Shell />;
 }
 
-function AppWrapper() {
-  const { dir } = useI18n();
-  return (
-    <div dir={dir} style={{ direction: dir }}>
-      <Inner />
-    </div>
-  );
-}
-
 export default function App() {
   return (
     <I18nProvider>
       <AuthProvider>
-        <AppWrapper />
+        <Inner />
       </AuthProvider>
     </I18nProvider>
   );

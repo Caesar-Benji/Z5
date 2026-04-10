@@ -17,7 +17,7 @@ import Knowledge from "./Knowledge";
 
 export default function Shell() {
   const { profile, signOut } = useAuth();
-  const { t, lang, setLang, isRTL } = useI18n();
+  const { t } = useI18n();
   const [view, setView] = useState("home");
   const [missionView, setMissionView] = useState("list");
   const [activeMissionId, setActiveMissionId] = useState(null);
@@ -50,35 +50,6 @@ export default function Shell() {
     }
   }
 
-  const langToggle = (
-    <div style={{ display: "flex", gap: 4 }}>
-      <button
-        onClick={() => setLang("he")}
-        style={{
-          all: "unset",
-          cursor: "pointer",
-          padding: "4px 8px",
-          fontSize: 12,
-          fontWeight: lang === "he" ? 700 : 400,
-          color: lang === "he" ? C.bright : C.dim,
-          borderBottom: lang === "he" ? `2px solid ${C.bright}` : "2px solid transparent",
-        }}
-      >עב</button>
-      <button
-        onClick={() => setLang("en")}
-        style={{
-          all: "unset",
-          cursor: "pointer",
-          padding: "4px 8px",
-          fontSize: 12,
-          fontWeight: lang === "en" ? 700 : 400,
-          color: lang === "en" ? C.bright : C.dim,
-          borderBottom: lang === "en" ? `2px solid ${C.bright}` : "2px solid transparent",
-        }}
-      >EN</button>
-    </div>
-  );
-
   // ------- Desktop sidebar -------
   const sidebar = (
     <>
@@ -99,7 +70,6 @@ export default function Shell() {
         <div style={{ color: C.bright, fontSize: 16, fontWeight: 700, letterSpacing: "2px" }}>
           {t("nav.terminal")}
         </div>
-        {langToggle}
       </div>
 
       <NavLabel>{t("nav.navigation")}</NavLabel>
@@ -166,7 +136,6 @@ export default function Shell() {
           )}
         </div>
       </div>
-      {langToggle}
       <button
         onClick={signOut}
         aria-label={t("nav.logout")}
